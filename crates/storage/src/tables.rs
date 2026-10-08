@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Persistent rows: player ownership is the repository account; each table
 //! has u64 secondary keys and named-column hashes, with integer, float and
 //! string values. This is a local storage codec,

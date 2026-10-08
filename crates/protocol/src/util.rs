@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Util component 9: preAuth and postAuth payload schemas.
 use crate::{Error, Wire, check_string, integer, schema, unique_keys};
 use nfs_heat2::{Encoder, Field, Fields, Item, Kind, Limits, Value};

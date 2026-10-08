@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! observed getTimeLimitedFeatures request subset.
 //! This models the DEDA string on the wire, without assigning semantics to its
 //! contents or inventing the schema of a nonempty response.

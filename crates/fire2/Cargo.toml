@@ -5,6 +5,7 @@ description = "Bounded Fire2 framing from NFS 2015 client observations"
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true

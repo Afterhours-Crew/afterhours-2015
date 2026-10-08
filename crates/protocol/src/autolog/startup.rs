@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! native Autolog startup models. Population and history policy are separate.
 use crate::{Error, Wire, schema};
 use nfs_heat2::{Encoder, Field, Fields, Item, Kind, Limits, Value};

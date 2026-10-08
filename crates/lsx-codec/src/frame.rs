@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! NUL-delimited messages on the launcher stream : the sender
 //! writes the string plus one NUL; the receiver scans for the first zero
 //! byte, consumes through it and rescans the remainder, so fragments and

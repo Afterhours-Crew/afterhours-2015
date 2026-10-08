@@ -41,3 +41,10 @@ Clippy and test commands. No private repository, account profile or recording is
 needed. Passing these tests establishes the covered component behavior, not
 offline play or launcher independence. Session integration, scene replication,
 launcher policy and the runnable server remain unfinished.
+
+## License
+
+This repository is licensed under the Mozilla Public License, version 2.0. See
+[LICENSE](LICENSE). Each source file carries the MPL notice, so modified copies
+of those files must stay under the MPL when distributed, while new files that
+only use these crates may carry another license.

@@ -5,6 +5,7 @@ description = "Evidence-backed NFS 2015 message schemas, independent of services
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true

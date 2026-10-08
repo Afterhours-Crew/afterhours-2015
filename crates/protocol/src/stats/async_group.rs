@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! native asynchronous Stats query and result payloads.
 //! RPC acknowledgement and final notification are separate protocol events.
 //! Current values are account state, never inferred from definition defaults.

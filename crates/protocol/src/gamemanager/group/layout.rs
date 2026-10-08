@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Only collection header 3 requires disambiguation beyond tagged wire kinds.
 //! native metadata fixes these paths; other tags are still preserved.
 use nfs_heat2::{Document, Encoder, Error, Limits, Member, Schema, Type, TypeId};

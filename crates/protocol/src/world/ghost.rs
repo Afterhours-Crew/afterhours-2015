@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Ghost section prefix codec.
 //! The first false deletion bit is consumed before direction-specific setup.
 //! Zero/all-deleted counts have no final false bit. Unknown bodies stay opaque.

@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 use nfs_heat2::{Encoder, ErrorKind, Limits, decode};
 
 const ADDRESS: [u8; 3] = [0x86, 0x49, 0x32];

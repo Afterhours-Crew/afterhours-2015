@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Borrowed navigation over already validated bytes. Each iteration scans one
 //! subtree; repeated nested traversal costs at most depth times document work.
 use crate::{Context, Error, ErrorKind, Event, Kind, Limits, Member, Parser, Stats, Value};

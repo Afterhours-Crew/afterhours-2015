@@ -5,6 +5,7 @@ description = "NFS 2015 local persistence port: per-account owned inventory with
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true

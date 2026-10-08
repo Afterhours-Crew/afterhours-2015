@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! typed definition-class bindings and derived fields, integrated in.
 //! Scalar words retain their exact bits; numeric domains are not inferred.
 //! The shared Tire/Brake serializers use the same layout for two classes.

@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! native UserSettings payloads. Preferences are account state, not defaults.
 //! Float values retain their raw IEEE-754 binary32 bits without normalization.
 use crate::{Error, Wire, check_string, schema, unique_keys};

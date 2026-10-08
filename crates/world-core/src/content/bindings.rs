@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Atomic startup identity graphs with distinct name, level, parent and bundle IDs.
 use super::{Error, MAX_BATCHES, MAX_ITEMS, MAX_STRING, Message};
 use std::collections::{BTreeMap, BTreeSet};

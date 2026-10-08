@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Repository port and the pure transition every adapter applies.
 use crate::AccountId;
 use crate::model::{Applied, Batch, Error, ItemId, ItemRecord, MAX_ITEMS, Op, Snapshot, Timestamp};

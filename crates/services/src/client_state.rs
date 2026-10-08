@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Bounded acknowledgement of normal menu and multiplayer client-state reports.
 //! Reports are informational; acknowledgement changes no account state and does
 //! not establish interactive readiness. Only modes 1/3 with status 0 are supported.

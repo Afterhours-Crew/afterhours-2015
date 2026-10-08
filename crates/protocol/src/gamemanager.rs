@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! GameManager state payloads. These are wire models, not session policy.
 //! names describe this build's enums; wire fields remain numeric so unknown
 //! values survive. Enum names do not define allowed transitions or readiness.

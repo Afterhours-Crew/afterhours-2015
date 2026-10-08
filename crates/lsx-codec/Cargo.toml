@@ -5,6 +5,7 @@ description = "Bounded launcher stream, XML, envelope and transform codecs"
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true

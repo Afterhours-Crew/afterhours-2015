@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Application startup kinds 13, 15 and 16.
 //! The selector-zero, untransformed profile retains unused physical final bits.
 //! It does not authenticate a peer, validate the opaque answer or own a session.

@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Evidence-backed backend payloads and bounded world codecs. No service policy.
 //! Strings borrow bytes without assuming UTF-8. Optional fields preserve absence;
 //! decoded unknown fields preserve their complete bytes. Canonical encoding sorts
