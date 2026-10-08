@@ -2,6 +2,7 @@
 //! Session orchestration, replay, scene policy and replication are separate.
 pub mod application;
 pub mod bits;
+pub mod content;
 pub mod crypto;
 pub mod files;
 pub mod handshake;
