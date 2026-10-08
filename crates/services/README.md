@@ -2,6 +2,9 @@
 
 State-owned services built on the storage port and typed protocol models.
 
+- Client-state acknowledgement validates a complete canonical request and returns
+  an empty reply with its correlation. Only modes 1/3 with normal status are
+  accepted; this reports no menu-readiness or persistent-state transition.
 - Inventory loading initializes an empty account once, validates item graphs,
   preserves later progress and produces replies only from committed state.
 - Persistent tables initialize missing schemas transactionally, preserve sparse

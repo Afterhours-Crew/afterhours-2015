@@ -84,6 +84,9 @@ dependencies = [
 name = "nfs-services"
 version = "0.1.0"
 dependencies = [
+ "nfs-fire2",
+ "nfs-heat2",
+ "nfs-protocol",
  "nfs-storage",
  "nfs-world-core",
  "serde_json",

@@ -1,5 +1,6 @@
 //! State-owned account services built on protocol and storage libraries.
 //! Repository and file calls are synchronous; async edges must use blocking workers.
+pub mod client_state;
 pub mod inventory;
 pub mod item_content;
 pub mod persistent;
