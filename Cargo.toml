@@ -1,5 +1,12 @@
 [workspace]
-members = ["crates/storage"]
+members = [
+    "crates/fire2",
+    "crates/heat2",
+    "crates/protocol",
+    "crates/world-core",
+    "crates/lsx-codec",
+    "crates/storage",
+]
 resolver = "3"
 
 [workspace.package]

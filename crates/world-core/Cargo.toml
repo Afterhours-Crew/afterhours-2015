@@ -1,0 +1,13 @@
+[package]
+name = "nfs-world-core"
+version = "0.1.0"
+description = "Socket-free world transport, application, File and item components"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+nfs-protocol = { path = "../protocol" }
