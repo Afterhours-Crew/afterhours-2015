@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! A small, bounded XML reader and writer for the LSX envelopes: elements,
 //! attributes, text and the standard five entities. No namespaces processing
 //! (names are kept verbatim, so an `lsx:` prefix survives as part of the

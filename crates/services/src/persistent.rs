@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Account-owned provider for the sixteen persistent tables.
 //! Static schemas are asset data. Rows belong to an account's repository;
 //! GarageItemsTable is a projection of its canonical garage slots, never a

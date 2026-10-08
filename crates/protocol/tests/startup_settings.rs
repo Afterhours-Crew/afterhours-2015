@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! fixtures are hand-packed from the wire shapes; keys/values are
 //! synthetic. They contain no owner's settings or captured profile bytes.
 use nfs_heat2::Limits;

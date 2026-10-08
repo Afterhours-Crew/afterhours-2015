@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! UserData wrapper; EDAT is the supported network-data subset.
 //! UserDataFlags is a uint32 field. This wire model is independent of
 //! lookup authorization, identity ownership and live status.

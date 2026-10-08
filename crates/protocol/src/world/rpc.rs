@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Type-47 entity RPC envelope and routing prefix.
 //! No method execution, target resolution or serial state.
 use super::{BitSpan, Error};

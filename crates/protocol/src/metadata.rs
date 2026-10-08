@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Fire2's heat2 metadata region, separate from the framing library and message body.
 use crate::{Error, Wire, schema};
 use nfs_heat2::{Encoder, Field, Fields, Item, Kind, Limits};

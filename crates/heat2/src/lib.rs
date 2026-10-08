@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Allocation-free structural decoding of the evidenced heat2 subset.
 //!
 //! Field tags are preserved verbatim; [`tag_text`] exposes their display bytes.

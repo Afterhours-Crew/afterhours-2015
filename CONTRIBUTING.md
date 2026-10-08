@@ -57,3 +57,10 @@ original code tested with NIST standard vectors.
 Content loaders use serde_json 1.0.151 (MIT OR Apache-2.0); all registry
 versions and checksums are locked. Main/master/default require pull requests
 and reject force pushes/deletion, including for administrators.
+
+## License
+
+All code here is under the [Mozilla Public License 2.0](LICENSE). Contributions
+are accepted under the same license, with no separate contributor agreement.
+Start every new source file with the three-line MPL notice used throughout the
+tree, and keep `license.workspace = true` in each crate manifest.

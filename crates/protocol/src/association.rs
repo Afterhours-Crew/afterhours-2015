@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! AssociationLists startup subset, independent of list policy.
 //! The route-to-body association remains inferred; no service policy is supplied.
 //! MEML's element schema is unresolved; it remains an opaque unknown field.

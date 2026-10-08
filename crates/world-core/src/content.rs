@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Bounded startup messages and per-world registration allocation.
 //! Unresolved field semantics retain numeric labels. Static content is supplied
 //! by the caller; no level definitions or captured replies are bundled.

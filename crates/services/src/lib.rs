@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! State-owned account services built on protocol and storage libraries.
 //! Repository and file calls are synchronous; async edges must use blocking workers.
 pub mod client_state;

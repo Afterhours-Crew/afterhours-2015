@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Authentication entitlement schemas, without authorization or catalog policy.
 //! Class-5 enum values use the native signed-dword writer; unknown i32 values
 //! remain intact. Entitlement IDs use bit-preserving uint64 encoding.

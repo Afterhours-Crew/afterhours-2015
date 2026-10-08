@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Stats keyscope configuration subset, independent of catalog policy.
 //! Integer pairs retain wire order. Their interval semantics remain inferred.
 use crate::{Error, Wire, schema};

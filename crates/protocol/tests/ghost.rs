@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Synthetic, independently laid-out fixtures; no captured bytes or identities.
 //! : 1 + optional 31 + 1 + 13 header bits, then leading (1 + 13)
 //! deletions, or a single 0 before nonempty setup. See world/ghost.rs provenance.

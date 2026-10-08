@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! native startup catalog query. This is not SpeedList matchmaking support.
 //! The request's BLIS tag means blazeId; LSPL is an optional list of type IDs.
 use crate::{Error, Wire, schema};

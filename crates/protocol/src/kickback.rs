@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Startup screenshot counters exchange.
 //! Counts are account data, not universal defaults or an upload implementation.
 use crate::{Error, Wire, schema};

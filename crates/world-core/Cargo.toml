@@ -5,6 +5,7 @@ description = "Socket-free world transport, application, File and item component
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true

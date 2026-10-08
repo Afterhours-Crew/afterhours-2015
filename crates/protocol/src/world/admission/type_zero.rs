@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! Pure fields for the type 0 identity interface. Caller owns session policy.
 //! The outer Decoded retains physical padding for exact round trips.
 use super::{Decoded, Message};
