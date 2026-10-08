@@ -53,3 +53,7 @@ registry checksums are recorded in `Cargo.lock`. XML2 codecs use `quick-xml`
 0.42.0 (MIT); its `memchr` dependency is MIT OR Unlicense. These come from the
 Cargo registry; implementations are not vendored. The LSX AES arithmetic is
 original code tested with NIST standard vectors.
+
+Content loaders use serde_json 1.0.151 (MIT OR Apache-2.0); all registry
+versions and checksums are locked. Main/master/default require pull requests
+and reject force pushes/deletion, including for administrators.

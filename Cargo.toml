@@ -6,6 +6,7 @@ members = [
     "crates/world-core",
     "crates/lsx-codec",
     "crates/storage",
+    "crates/services",
 ]
 resolver = "3"
 
