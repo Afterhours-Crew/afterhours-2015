@@ -3,6 +3,10 @@
 Socket-free world components: bit writing, transport transforms, datagram
 framing and cursors, handshake, reliable link, application admission/control
 state, File records and transfer state, and item/inventory models.
+Startup content codecs cover load-level messages, names and registrations.
+Registration bindings validate distinct name/level/parent/bundle identities and
+reject missing parents, cycles and duplicate identities atomically. The included
+sequential registration allocator covers the supported startup form only.
 
 Each connection owns its state. Callers supply data, clocks, identifiers, random
 values, keys and resource policies. No MAC template, extracted item catalog,
@@ -11,5 +15,6 @@ application model currently covers a single-peer host connection; this is not a
 complete multiplayer world implementation.
 
 Tests cover loss, retries, ordering, rollover, limits, cancellation and constructed
-transfers. [The rollover vector](tests/fixtures/transport/README.md) is synthetic.
+transfers, plus independently packed startup literals and registration allocation.
+[The rollover vector](tests/fixtures/transport/README.md) is synthetic.
 These checks do not establish offline game acceptance.

@@ -13,7 +13,7 @@ these implemented components:
 | [nfs-fire2](crates/fire2/README.md) | Bounded stream framing and incremental decoding |
 | [nfs-heat2](crates/heat2/README.md) | Bounded tagged fields, containers and canonical encoding |
 | [nfs-protocol](crates/protocol/README.md) | Typed backend payloads and bit-oriented world codecs |
-| [nfs-world-core](crates/world-core/README.md) | Per-connection transport, handshake, application state, File transfers and item models |
+| [nfs-world-core](crates/world-core/README.md) | Transport, application state, File transfers, item models and startup registration codecs |
 | [nfs-lsx-codec](crates/lsx-codec/README.md) | Launcher framing, XML, envelopes and transform codecs |
 | [nfs-storage](crates/storage/README.md) | Account-owned inventory, garage slots and tables, with memory and SQLite adapters |
 
