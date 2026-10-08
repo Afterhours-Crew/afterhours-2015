@@ -49,4 +49,7 @@ cargo test --workspace --locked
 
 Review third-party licenses before adding code or dependencies. Current storage
 uses pinned `rusqlite` with bundled SQLite and limits; transitive versions and
-registry checksums are recorded in `Cargo.lock`.
+registry checksums are recorded in `Cargo.lock`. XML2 codecs use `quick-xml`
+0.42.0 (MIT); its `memchr` dependency is MIT OR Unlicense. These come from the
+Cargo registry; implementations are not vendored. The LSX AES arithmetic is
+original code tested with NIST standard vectors.

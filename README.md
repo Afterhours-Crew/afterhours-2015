@@ -5,12 +5,20 @@ servers as the goals. This is the canonical home for runtime code and its
 first-party dependencies.
 
 Components arrive incrementally once their behavior is understood and tested.
-**There is no runnable game server in this repository yet.** The current
-workspace contains `nfs-storage`: account-owned inventory, garage slots and
-persistent tables, with in-memory and SQLite adapters. Its tests use generated
-data and temporary databases; game files and service access are unnecessary.
+**There is no runnable game server in this repository yet.** The workspace owns
+these implemented components:
 
-See the [component guide](crates/storage/README.md) and
+| Component | Responsibility |
+| --- | --- |
+| [nfs-fire2](crates/fire2/README.md) | Bounded stream framing and incremental decoding |
+| [nfs-heat2](crates/heat2/README.md) | Bounded tagged fields, containers and canonical encoding |
+| [nfs-protocol](crates/protocol/README.md) | Typed backend payloads and bit-oriented world codecs |
+| [nfs-world-core](crates/world-core/README.md) | Per-connection transport, handshake, application state, File transfers and item models |
+| [nfs-lsx-codec](crates/lsx-codec/README.md) | Launcher framing, XML, envelopes and transform codecs |
+| [nfs-storage](crates/storage/README.md) | Account-owned inventory, garage slots and tables, with memory and SQLite adapters |
+
+Tests use constructed inputs, standard cryptographic vectors and temporary
+databases. Game files and service access are unnecessary. See the
 [contribution and promotion process](CONTRIBUTING.md).
 
 ## Build and test
@@ -29,5 +37,6 @@ cargo test --workspace --locked
 
 Once the toolchain and dependencies are cached, add `--offline` to Cargo build,
 Clippy and test commands. No private repository, account profile or recording is
-needed. Passing these tests establishes storage behavior only, not offline play
-or launcher independence.
+needed. Passing these tests establishes the covered component behavior, not
+offline play or launcher independence. Session integration, scene replication,
+launcher policy and the runnable server remain unfinished.
