@@ -5,6 +5,15 @@ State-owned services built on the storage port and typed protocol models.
 - Client-state acknowledgement validates a complete canonical request and returns
   an empty reply with its correlation. Only modes 1/3 with normal status are
   accepted; this reports no menu-readiness or persistent-state transition.
+- Telemetry (`4/171`) validates canonical requests, pins the first accepted
+  connection identities and retains at most 16 diagnostic samples. It returns a
+  correlated header-only acknowledgement without forwarding data or changing
+  account state. Requests contain at most eight reports and 512 body bytes.
+- In-game recommendations (`2050/21`) answer only for the current persona,
+  encoding empty speed-wall maps for stat types 0 and 1. Shared-wrap listings
+  (`2052/23`) likewise require the current persona and supported item system,
+  returning a zero total for the empty local catalog. Populated catalogs and
+  wrap user-list queries are explicitly unsupported.
 - Inventory loading initializes an empty account once, validates item graphs,
   preserves later progress and produces replies only from committed state.
 - Persistent tables initialize missing schemas transactionally, preserve sparse
@@ -15,9 +24,15 @@ State-owned services built on the storage port and typed protocol models.
 Time and local account identity are explicit inputs. Repository/file operations
 are synchronous; a socket edge must dispatch them to blocking workers. These
 libraries provide no listener and require no service access or recording.
+The caller creates separate service state for each connection and supplies its
+authenticated local persona. These handlers accept one complete frame; stream
+assembly and session-readiness gating belong to the calling edge. Invalid input
+produces an error without advancing service state.
 The local initial garage policy selects the lowest owned root vehicle ID;
 it is an explicit local policy, not verified official fresh-account selection.
 
 Tests construct item definitions, rows and accounts, including separate-account
 initialization races, failed commits, retries and SQLite restart persistence.
+Control-service tests cover malformed and noncanonical requests, resource bounds,
+identity changes, connection isolation, repeated requests and correlated replies.
 Run the workspace Cargo gates in the root README. No game install is required.
