@@ -80,3 +80,14 @@ initialization races, failed commits, retries and SQLite restart persistence.
 Control-service tests cover malformed and noncanonical requests, resource bounds,
 identity changes, connection isolation, repeated requests and correlated replies.
 Run the workspace Cargo gates in the root README. No game install is required.
+
+Local authentication uses an explicit private identity document (storage-account
+binding, positive wire persona/account IDs and display name), deployment policy,
+and fresh caller-supplied entropy per connection. The edge authorizes the local
+account and compares its storage binding before serving. External auth codes are
+shape-checked only and never retained, verified remotely or returned. Login emits
+four ordered frames; post-auth advertises loopback services. State advances only
+after the entire batch writes; partial failure closes the exchange. Retries with
+the same correlation retain the first clock value. Persistent identities survive
+reconnect while session/telemetry/ticker tokens and connection IDs refresh.
+Remote account authentication and automatic first-login history are not provided.
