@@ -48,6 +48,11 @@ becomes visible only after both frames write; retries ACK without republishing.
 Bounds, failed writes and foreign policies close the session. This supports the
 single current-world association, not arbitrary attribute edits.
 
+The local self-mesh service generates the validation notification and correlated
+ACK from the accepted world binding. It reports publication only after the pair
+writes, closes on failed writes or premature retries, and bounds repeat requests.
+This does not replace the independent host reliable-synchronization gate.
+
 ## License
 
 This repository is licensed under the Mozilla Public License, version 2.0. See

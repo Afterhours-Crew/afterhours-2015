@@ -41,3 +41,4 @@ impl std::error::Error for ContentError {}
 pub mod world_readiness;
 
 pub mod world_attributes;
+pub mod world_connection;
