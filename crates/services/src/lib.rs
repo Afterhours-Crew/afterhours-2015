@@ -46,3 +46,5 @@ pub mod world_connection;
 pub mod world_setup;
 
 pub mod matchmaking;
+
+pub mod user_settings;

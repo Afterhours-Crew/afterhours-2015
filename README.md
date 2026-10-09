@@ -70,6 +70,13 @@ against explicit rule policy and the initialized group's current user and networ
 binding. Configuration contains named rules and local limits, never serialized
 requests. This covers a single local member; broader matchmaking remains work.
 
+Settings use typed per-key changes and account-owned SQLite documents. The edge
+refreshes state before each request, commits changes before success replies and
+keeps committed state when a reply is lost. Bounded compare-and-swap retries merge
+concurrent connections without replacing unrelated keys. Separate versioned
+settings files leave inventory databases unchanged; local content seeds only an
+absent settings store. Filesystem and SQLite work belongs on blocking workers.
+
 ## License
 
 This repository is licensed under the Mozilla Public License, version 2.0. See
