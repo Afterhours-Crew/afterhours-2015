@@ -54,7 +54,9 @@ pub struct Event {
 pub struct State {
     pub activities: BTreeMap<u32, Record>,
     pub collectibles: BTreeMap<u32, Record>,
-    pub events: BTreeMap<u32, Event>,
+    /// Stable account record order, with unique event IDs. The wire list does
+    /// not impose numeric event-ID order.
+    pub events: Vec<(u32, Event)>,
     pub objective_times: BTreeMap<u64, u64>,
     pub rep_modified: u64,
     /// Received likes, reward level, sent likes, screenshot count.
@@ -248,10 +250,10 @@ impl Current {
             .state
             .events
             .iter()
-            .map(|(&id, e)| StatsAndAwardsEvent {
+            .map(|(id, e)| StatsAndAwardsEvent {
                 attempts: Some(e.attempts),
                 position: Some(e.position),
-                event_id: Some(id),
+                event_id: Some(*id),
                 record_name: Some(e.record.name.as_bytes()),
                 screenshot_id: Some(e.record.screenshot),
                 last_modified: Some(e.record.modified),

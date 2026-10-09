@@ -104,12 +104,18 @@ impl State {
         if meta["version"] != 1 {
             return Err(Error::State);
         }
+        let mut event_ids = std::collections::BTreeSet::new();
         let events = decode_rows(snapshot, 3)?
             .into_iter()
-            .map(|(id, value)| {
-                fields(&value, &["attempts", "position", "record", "kind"])?;
+            .enumerate()
+            .map(|(ordinal, (row, value))| {
+                fields(&value, &["id", "attempts", "position", "record", "kind"])?;
+                let id = unsigned(&value["id"])?;
+                if row != ordinal as u64 || !event_ids.insert(id) {
+                    return Err(Error::State);
+                }
                 Ok((
-                    id.try_into().map_err(|_| Error::State)?,
+                    id,
                     Event {
                         attempts: unsigned(&value["attempts"])?,
                         position: unsigned(&value["position"])?,
@@ -165,7 +171,7 @@ impl State {
             BTreeMap::from([(0, json!({"version":1,"rep_modified":self.rep_modified,"received":received,"reward":reward,"sent":sent,"screenshots":screenshots}))]),
             self.activities.iter().map(|(&id, r)| (u64::from(id), record_json(r))).collect(),
             self.collectibles.iter().map(|(&id, r)| (u64::from(id), record_json(r))).collect(),
-            self.events.iter().map(|(&id, e)| (u64::from(id), json!({"attempts":e.attempts,"position":e.position,"record":record_json(&e.record),"kind":e.kind}))).collect(),
+            self.events.iter().enumerate().map(|(ordinal, (id, e))| (ordinal as u64, json!({"id":id,"attempts":e.attempts,"position":e.position,"record":record_json(&e.record),"kind":e.kind}))).collect(),
             self.objective_times.iter().map(|(&id, &v)| (id, json!(v))).collect(),
             self.entitlements.iter().map(|(&id, &v)| (u64::from(id as u32), json!(v))).collect(),
         ];

@@ -212,7 +212,7 @@ fn populated(mut snapshot: Snapshot) -> Snapshot {
     };
     let state = State {
         activities: BTreeMap::from([(91, record.clone())]),
-        events: BTreeMap::from([(
+        events: vec![(
             44,
             Event {
                 attempts: 2,
@@ -220,7 +220,7 @@ fn populated(mut snapshot: Snapshot) -> Snapshot {
                 record,
                 kind: "local-event".into(),
             },
-        )]),
+        )],
         objective_times: BTreeMap::from([(u64::MAX, 102)]),
         rep_modified: 103,
         kickbacks: [1, 2, 3, 4],
@@ -466,4 +466,46 @@ fn updates_are_atomic_retry_safe_isolated_and_survive_sqlite_restart() {
         );
     }
     std::fs::remove_dir_all(path).unwrap();
+}
+
+#[test]
+fn event_record_order_survives_storage_without_sorting_by_identifier() {
+    let repo = MemoryRepository::default();
+    let who = AccountId::from_owned_config([7; 16]).unwrap();
+    let mut snapshot = initialize(&repo, who);
+    let mut state = State {
+        events: vec![
+            (91, Event::default()),
+            (3, Event::default()),
+            (44, Event::default()),
+        ],
+        ..Default::default()
+    };
+    for op in state.operations().unwrap() {
+        if let Op::SetTable(id, table) = op {
+            snapshot.tables.insert(id, table);
+        }
+    }
+    assert_eq!(State::load(&snapshot).unwrap(), state);
+    let bytes = current(&snapshot).reply(&query(123), 123).unwrap();
+    assert_eq!(
+        response(&bytes)
+            .race_events
+            .unwrap()
+            .0
+            .iter()
+            .map(|e| e.event_id.unwrap())
+            .collect::<Vec<_>>(),
+        [91, 3, 44]
+    );
+    state.events.push((3, Event::default()));
+    assert!(state.operations().is_err());
+    let rows = &mut snapshot
+        .tables
+        .get_mut(&key("AfterhoursRaceRecords"))
+        .unwrap()
+        .rows;
+    let row = rows.remove(&1).unwrap();
+    rows.insert(5, row);
+    assert!(State::load(&snapshot).is_err());
 }
