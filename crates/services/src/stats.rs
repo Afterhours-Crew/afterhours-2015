@@ -62,6 +62,13 @@ struct Definition {
 pub struct Catalog {
     groups: BTreeMap<Vec<u8>, Definition>,
 }
+impl std::fmt::Debug for Catalog {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StatDefinitions")
+            .field("groups", &self.groups.len())
+            .finish()
+    }
+}
 
 fn fields<'a>(v: &'a Json, names: &[&str]) -> Result<&'a Json, ContentError> {
     let o = v.as_object().ok_or(ContentError::Invalid)?;
