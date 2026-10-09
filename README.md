@@ -62,6 +62,11 @@ policy, accepted player state, fresh allocation and injected match measurements.
 It retains no recorded reply. Publication waits for the complete write; failed
 writes and premature retries invalidate the world.
 
+Fresh matchmaking/world allocations use injected raw entropy, local ID domains
+and a caller-owned loopback endpoint. Matchmaking acknowledgements bind an
+admitted current group/player context, commit only after complete writes and
+bound retries. Criteria admission remains the caller's responsibility.
+
 ## License
 
 This repository is licensed under the Mozilla Public License, version 2.0. See

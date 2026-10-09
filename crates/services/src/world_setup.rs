@@ -10,6 +10,9 @@ use std::{
     collections::BTreeMap,
     net::{Ipv4Addr, SocketAddr},
 };
+mod allocation;
+pub use allocation::{Generated, SEED_BYTES};
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
     Config,
@@ -538,39 +541,8 @@ impl Config {
         a: &Allocation<'_>,
         m: MatchMetrics,
     ) -> Result<Vec<u8>, Error> {
-        let ids = [
-            a.game,
-            a.reporting,
-            a.host_persona as u64,
-            a.host_session,
-            a.host_connection,
-        ];
-        let current = [
-            c.group,
-            c.matchmaking,
-            c.persona as u64,
-            c.user_session,
-            c.connection,
-        ];
-        if current.iter().any(|v| *v == 0 || *v > i64::MAX as u64)
-            || c.group == c.matchmaking
-            || ids
-                .iter()
-                .any(|v| *v == 0 || *v > i64::MAX as u64 || current.contains(v))
-            || ids.iter().enumerate().any(|(i, id)| ids[..i].contains(id))
-            || a.shared_seed == 0
-            || a.clock <= 0
-            || a.endpoint.ip() != std::net::IpAddr::V4(Ipv4Addr::LOCALHOST)
-            || a.endpoint.port() == 0
-            || !uuid(a.uuid)
-            || !uuid(c.group_uuid)
-            || a.uuid == c.group_uuid
-            || [a.name, a.external_name]
-                .iter()
-                .any(|s| s.is_empty() || s.len() > 64 || !s.iter().all(u8::is_ascii_graphic))
-            || m.fit > self.max_fit
-            || m.elapsed_micros < 0
-        {
+        a.validate(c)?;
+        if m.fit > self.max_fit || m.elapsed_micros < 0 {
             return Err(Error::Context);
         }
         let mut p =
@@ -756,5 +728,51 @@ impl Config {
             frame_limits(),
         )
         .map_err(|_| Error::Encode)
+    }
+}
+
+impl Allocation<'_> {
+    pub fn validate(&self, c: &Current<'_>) -> Result<(), Error> {
+        let a = self;
+        let ids = [
+            a.game,
+            a.reporting,
+            a.host_persona as u64,
+            a.host_session,
+            a.host_connection,
+        ];
+        let current = [
+            c.group,
+            c.matchmaking,
+            c.persona as u64,
+            c.user_session,
+            c.connection,
+        ];
+        if current.iter().any(|v| *v == 0 || *v > i64::MAX as u64)
+            || c.group == c.matchmaking
+            || ids
+                .iter()
+                .any(|v| *v == 0 || *v > i64::MAX as u64 || current.contains(v))
+            || ids.iter().enumerate().any(|(i, id)| ids[..i].contains(id))
+            || a.shared_seed == 0
+            || a.clock <= 0
+            || a.endpoint.ip() != std::net::IpAddr::V4(Ipv4Addr::LOCALHOST)
+            || a.endpoint.port() == 0
+            || !uuid(a.uuid)
+            || !uuid(c.group_uuid)
+            || a.uuid == c.group_uuid
+            || [a.name, a.external_name]
+                .iter()
+                .any(|s| s.is_empty() || s.len() > 64 || !s.iter().all(u8::is_ascii_graphic))
+        {
+            return Err(Error::Context);
+        }
+
+        let player =
+            ReplicatedGamePlayer::decode(c.player, body_limits()).map_err(|_| Error::Context)?;
+        if player.uuid.is_none_or(|u| !uuid(u) || u == a.uuid) {
+            return Err(Error::Context);
+        }
+        Ok(())
     }
 }
