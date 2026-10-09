@@ -53,6 +53,10 @@ ACK from the accepted world binding. It reports publication only after the pair
 writes, closes on failed writes or premature retries, and bounds repeat requests.
 This does not replace the independent host reliable-synchronization gate.
 
+The initial matchmaking diagnostic uses bounded local search policy and accepted
+session IDs. Its notification publishes only after a complete write; retries do
+not publish twice. It does not allocate a world or assert a successful match.
+
 ## License
 
 This repository is licensed under the Mozilla Public License, version 2.0. See
