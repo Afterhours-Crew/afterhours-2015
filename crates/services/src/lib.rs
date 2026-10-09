@@ -8,6 +8,9 @@ pub mod client_state;
 pub mod inventory;
 pub mod item_content;
 pub mod persistent;
+pub mod recommendations;
+pub mod shared_wraps;
+pub mod telemetry;
 
 /// Build identity required by versioned content documents; no game data is bundled.
 pub const SUPPORTED_BUILD_SHA256: &str =
