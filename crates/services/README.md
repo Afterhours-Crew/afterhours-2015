@@ -58,6 +58,13 @@ rotation and gameplay reward policies are not inferred by this service.
 - Versioned item-definition and table-schema loaders validate bounded input and
   its build identity. Callers supply their own content; no catalog is bundled.
 
+Bootstrap pre-authentication, ping and IdentityParams use a versioned deployment
+document and caller-bound loopback endpoints. Configuration includes product
+metadata, bounded scalar settings and latency site names; endpoint values are
+generated locally, and the bandwidth site stays unset. Each connection commits
+its ordering transition only after a complete write. Exact retries preserve time;
+failed writes close the exchange. This does not implement account authentication.
+
 Time and local account identity are explicit inputs. Repository/file operations
 are synchronous; a socket edge must dispatch them to blocking workers. These
 libraries provide no listener and require no service access or recording.
