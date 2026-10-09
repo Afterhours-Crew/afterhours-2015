@@ -9,7 +9,9 @@ pub mod inventory;
 pub mod item_content;
 pub mod persistent;
 pub mod recommendations;
+pub mod reputation;
 pub mod shared_wraps;
+pub mod stats;
 pub mod telemetry;
 
 /// Build identity required by versioned content documents; no game data is bundled.

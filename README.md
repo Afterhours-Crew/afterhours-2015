@@ -15,7 +15,7 @@ these implemented components:
 | [nfs-protocol](crates/protocol/README.md) | Typed backend payloads and bit-oriented world codecs |
 | [nfs-world-core](crates/world-core/README.md) | Transport, application state, File transfers, item models and startup registration codecs |
 | [nfs-lsx-codec](crates/lsx-codec/README.md) | Launcher framing, XML, envelopes and transform codecs |
-| [nfs-services](crates/services/README.md) | Client-state and telemetry handling, local recommendations/wrap listings, account inventory, persistent-table views and content loaders |
+| [nfs-services](crates/services/README.md) | Current account stats and reputation, client-state/telemetry handling, local recommendations/wrap listings, inventory, persistent-table views and content loaders |
 | [nfs-storage](crates/storage/README.md) | Account-owned inventory, garage slots and tables, with memory and SQLite adapters |
 
 Tests use constructed inputs, standard cryptographic vectors and temporary

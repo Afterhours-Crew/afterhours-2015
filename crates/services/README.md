@@ -18,6 +18,16 @@ State-owned services built on the storage port and typed protocol models.
   preserves later progress and produces replies only from committed state.
 - Persistent tables initialize missing schemas transactionally, preserve sparse
   saved cells and expose garage slots as a projection of the same account state.
+- Stats definitions (`7/4`) use a bounded `nfs-stat-definitions` version1 catalog.
+  Its groups name a persistent table and ordered integer columns. Current Stats
+  queries (`7/16`, followed by `7/50`) read those columns from a committed account
+  view, bind the authenticated persona and echo the requested view ID. Missing
+  state, other identities, unknown groups and unsupported periods get no success.
+  Static default strings never substitute for missing account values.
+- Reputation projects level and adjacent score thresholds from the current
+  six persisted scores and an injected increasing threshold list. Current Stats
+  use that calculated level even when the saved level is stale. The same model
+  can drive world presentation; score accrual is outside this component.
 - Versioned item-definition and table-schema loaders validate bounded input and
   its build identity. Callers supply their own content; no catalog is bundled.
 
