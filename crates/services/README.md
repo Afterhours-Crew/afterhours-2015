@@ -28,6 +28,15 @@ State-owned services built on the storage port and typed protocol models.
   six persisted scores and an injected increasing threshold list. Current Stats
   use that calculated level even when the saved level is stale. The same model
   can drive world presentation; score accrual is outside this component.
+- Startup groups own a single authenticated member, fresh injected identifiers,
+  and create/mesh/finalize/initialize transitions. Public and private group
+  requests have explicit validation; setup fields come from current identity,
+  network data and a bounded `nfs-group-policy` version1 deployment document.
+  No captured request or response is a configuration input. Immediate retries
+  repeat only the correlated reply; membership notifications occur once.
+  The edge must commit each output batch after writing it or abort on failure.
+  An initialized, committed group exposes an immutable matchmaking handoff.
+  Multiplayer membership, matchmaking and driving worlds are outside this service.
 - Versioned item-definition and table-schema loaders validate bounded input and
   its build identity. Callers supply their own content; no catalog is bundled.
 
