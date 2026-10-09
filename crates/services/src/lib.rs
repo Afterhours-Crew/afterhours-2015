@@ -39,3 +39,5 @@ impl std::fmt::Display for ContentError {
 impl std::error::Error for ContentError {}
 
 pub mod world_readiness;
+
+pub mod world_attributes;

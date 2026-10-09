@@ -42,6 +42,12 @@ needed. Passing these tests establishes the covered component behavior, not
 offline play or launcher independence. Session integration, scene replication,
 launcher policy and the runnable server remain unfinished.
 
+The world attribute service consumes a committed readiness permit, validates the
+current group-to-world association and builds a typed notification. The association
+becomes visible only after both frames write; retries ACK without republishing.
+Bounds, failed writes and foreign policies close the session. This supports the
+single current-world association, not arbitrary attribute edits.
+
 ## License
 
 This repository is licensed under the Mozilla Public License, version 2.0. See
