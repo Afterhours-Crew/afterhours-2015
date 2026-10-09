@@ -82,8 +82,8 @@ pub struct Config {
     ping_site: String,
     mode_attribute: String,
     telemetry_interval: i64,
-    game_attributes: BTreeMap<String, String>,
-    player_attributes: BTreeMap<String, String>,
+    game_attributes: Vec<(String, String)>,
+    player_attributes: Vec<(String, String)>,
     player_role: String,
     game_settings: u32,
     max_players: u16,
@@ -91,7 +91,7 @@ pub struct Config {
     capacities: Vec<u16>,
     teams: Vec<u16>,
     roles: BTreeMap<String, u16>,
-    multi_role_criteria: BTreeMap<String, String>,
+    multi_role_criteria: Vec<(String, String)>,
     report_name: String,
     max_fit: u32,
 }
@@ -136,14 +136,24 @@ impl Config {
             }
             Ok(s.to_owned())
         }
-        fn map(v: &Value) -> Result<BTreeMap<String, String>, Error> {
-            let o = v.as_object().ok_or(Error::Config)?;
-            if o.is_empty() || o.len() > 16 {
+        fn map(v: &Value) -> Result<Vec<(String, String)>, Error> {
+            let a = v.as_array().ok_or(Error::Config)?;
+            if a.is_empty() || a.len() > 16 {
                 return Err(Error::Config);
             }
-            o.iter()
-                .map(|(k, v)| Ok((text(&Value::String(k.clone()))?, text(v)?)))
-                .collect()
+            let mut entries: Vec<(String, String)> = Vec::new();
+            for item in a {
+                let pair = item
+                    .as_array()
+                    .filter(|p| p.len() == 2)
+                    .ok_or(Error::Config)?;
+                let key = text(&pair[0])?;
+                if entries.iter().any(|(k, _)| k == &key) {
+                    return Err(Error::Config);
+                }
+                entries.push((key, text(&pair[1])?));
+            }
+            Ok(entries)
         }
         fn list(v: &Value, max: usize) -> Result<Vec<u16>, Error> {
             let a = v.as_array().ok_or(Error::Config)?;
@@ -197,7 +207,10 @@ impl Config {
             || c.capacities.iter().map(|x| u32::from(*x)).sum::<u32>() != u32::from(c.max_players)
             || c.roles.values().any(|v| *v == 0 || *v > c.max_players)
             || !c.roles.contains_key(&c.player_role)
-            || !c.game_attributes.contains_key(&c.mode_attribute)
+            || !c
+                .game_attributes
+                .iter()
+                .any(|(k, _)| k == &c.mode_attribute)
             || c.max_fit == 0
         {
             return Err(Error::Config);
@@ -223,7 +236,7 @@ impl Config {
 mod tests {
     use super::*;
     fn policy() -> serde_json::Value {
-        serde_json::json!({"version":1,"protocol_version":"local-v1","protocol_hash":7,"ping_site":"local","mode_attribute":"mode","telemetry_interval":1000000,"game_attributes":{"mode":"practice"},"player_attributes":{"mode":"practice"},"player_role":"driver","game_settings":1,"max_players":4,"min_players":1,"slot_capacities":[4,0,0,0],"teams":[0],"roles":{"driver":4},"multi_role_criteria":{"single":"driver"},"report_name":"local","max_fit":100})
+        serde_json::json!({"version":1,"protocol_version":"local-v1","protocol_hash":7,"ping_site":"local","mode_attribute":"mode","telemetry_interval":1000000,"game_attributes":[["mode","practice"]],"player_attributes":[["mode","practice"]],"player_role":"driver","game_settings":1,"max_players":4,"min_players":1,"slot_capacities":[4,0,0,0],"teams":[0],"roles":{"driver":4},"multi_role_criteria":[["single","driver"]],"report_name":"local","max_fit":100})
     }
     fn config() -> Config {
         Config::from_slice(&serde_json::to_vec(&policy()).unwrap()).unwrap()
@@ -396,6 +409,36 @@ mod tests {
         }
     }
     #[test]
+    fn configured_map_order_is_preserved_and_duplicate_keys_are_rejected() {
+        let mut policy = policy();
+        policy["game_attributes"] =
+            serde_json::json!([["z", "last"], ["mode", "practice"], ["a", "first"]]);
+        let config = Config::from_slice(&serde_json::to_vec(&policy).unwrap()).unwrap();
+        let p = player();
+        let wire = config
+            .setup(&current(&p), &allocation(), metrics())
+            .unwrap();
+        let f = nfs_fire2::decode(&wire, frame_limits())
+            .unwrap()
+            .unwrap()
+            .frame;
+        let setup = NotifyGameSetup::decode(f.body, body_limits()).unwrap();
+        assert_eq!(
+            setup
+                .game_data
+                .unwrap()
+                .game_attribs
+                .unwrap()
+                .0
+                .iter()
+                .map(|(k, _)| *k)
+                .collect::<Vec<_>>(),
+            vec![b"z".as_slice(), b"mode", b"a"]
+        );
+        policy["game_attributes"] = serde_json::json!([["mode", "practice"], ["mode", "other"]]);
+        assert!(Config::from_slice(&serde_json::to_vec(&policy).unwrap()).is_err());
+    }
+    #[test]
     fn config_rejects_unbounded_or_inconsistent_policy() {
         for (k, v) in [
             ("max_players", serde_json::json!(65)),
@@ -471,7 +514,7 @@ fn network(endpoint: SocketAddr, connection: u64) -> NetworkAddress<'static> {
         ..Default::default()
     })
 }
-fn entries(map: &BTreeMap<String, String>) -> ConfigEntries<'_> {
+fn entries(map: &[(String, String)]) -> ConfigEntries<'_> {
     ConfigEntries(
         map.iter()
             .map(|(k, v)| (k.as_bytes(), v.as_bytes()))
