@@ -91,3 +91,13 @@ after the entire batch writes; partial failure closes the exchange. Retries with
 the same correlation retain the first clock value. Persistent identities survive
 reconnect while session/telemetry/ticker tokens and connection IDs refresh.
 Remote account authentication and automatic first-login history are not provided.
+
+Host readiness owns the current binding and one bounded pending mesh request.
+It requires matching reliable-synchronization proof, a later injected join time,
+and a complete ACK/player-ready/player-joined batch write before emitting a
+move-only continuation permit. Notifications are typed projections of this state;
+no captured bodies are retained. Foreign/dropped writer tickets, partial writes,
+wrong proof identities and malformed requests fail closed. Retries emit only the
+correlated ACK after readiness commits. The edge remains responsible for admitting
+the current world after its setup/self-validation writes and for publishing real
+transport synchronization; construction does not prove those prerequisites.
