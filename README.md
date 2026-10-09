@@ -65,7 +65,10 @@ writes and premature retries invalidate the world.
 Fresh matchmaking/world allocations use injected raw entropy, local ID domains
 and a caller-owned loopback endpoint. Matchmaking acknowledgements bind an
 admitted current group/player context, commit only after complete writes and
-bound retries. Criteria admission remains the caller's responsibility.
+bound retries. Typed admission validates the complete supported request form
+against explicit rule policy and the initialized group's current user and network
+binding. Configuration contains named rules and local limits, never serialized
+requests. This covers a single local member; broader matchmaking remains work.
 
 ## License
 

@@ -402,3 +402,6 @@ fn configuration_and_generated_state_are_bounded() {
     );
     assert!(Config::from_json(&serde_json::json!({})).is_err());
 }
+
+#[path = "support/matchmaking_admission.rs"]
+mod matchmaking_admission;

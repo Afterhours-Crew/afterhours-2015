@@ -2,15 +2,19 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! Owned M1 acknowledgement after request admission. The caller must validate
-//! criteria and bind an initialized group before constructing this capability.
+//! Typed local matchmaking admission against an initialized group and explicit
+//! deployment policy, followed by a bounded, write-committed acknowledgement.
 use crate::bootstrap::{body_limits, frame_limits};
 use nfs_protocol::gamemanager::StartMatchmakingResponse;
+mod admission;
+pub use admission::{AttributeRule, Config};
 pub const SEED_BYTES: usize = 8;
 pub const MAX_REQUESTS: usize = 8;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
     Context,
+    Config,
+    Ineligible,
     Pending,
     Closed,
     Limit,
