@@ -8,6 +8,7 @@ pub mod awards;
 pub mod client_state;
 pub mod group;
 pub mod inventory;
+pub mod item_builder;
 pub mod item_content;
 pub mod persistent;
 pub mod recommendations;

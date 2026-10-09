@@ -16,6 +16,9 @@ State-owned services built on the storage port and typed protocol models.
   wrap user-list queries are explicitly unsupported.
 - Inventory loading initializes an empty account once, validates item graphs,
   preserves later progress and produces replies only from committed state.
+- ItemBuilder begin-update validates a complete bounded call against the current
+  scene binding and an owned participant. Its server behavior is a silent no-op;
+  it neither changes inventory nor accepts commit or customization mutations.
 - Persistent tables initialize missing schemas transactionally, preserve sparse
   saved cells and expose garage slots as a projection of the same account state.
 - Stats definitions (`7/4`) use a bounded `nfs-stat-definitions` version1 catalog.
