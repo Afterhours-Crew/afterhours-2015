@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 //! The item builder's begin-update call has no server-side effects or reply.
-//! Its current scene binding and participant ownership still require validation.
+//! Its current scene binding and player ownership still require validation.
 //! Commit and customization mutation methods are deliberately not accepted here.
 use nfs_protocol::world::{
     BitSpan,
@@ -34,7 +34,7 @@ impl Binding {
 
     /// Returns false for other routes. A handled call produces no output, keeps
     /// no retained state, and cannot modify inventory. Exact retries are silent.
-    /// `owns` must validate a live participant belonging to this connection.
+    /// `owns` must validate a live player belonging to this connection.
     pub fn begin_update(
         self,
         body: BitSpan<'_>,
@@ -67,8 +67,8 @@ impl Binding {
         }
         // The trailing seven bits align the native payload; their value is not
         // an argument. Do not confuse a nonzero padding bit with a mutation.
-        let participant = envelope.references()[1];
-        if participant == 0 || !owns(participant) {
+        let player = envelope.references()[1];
+        if player == 0 || !owns(player) {
             return Err(Error::Ownership);
         }
         Ok(true)
