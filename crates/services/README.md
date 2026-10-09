@@ -28,6 +28,15 @@ State-owned services built on the storage port and typed protocol models.
   six persisted scores and an injected increasing threshold list. Current Stats
   use that calculated level even when the saved level is stale. The same model
   can drive world presentation; score accrual is outside this component.
+- Menu Stats and Awards (`2050/71`) project the same account's collection and
+  objective flags, gameplay counters, medals, SpeedList counts and reputation.
+  Version1 account metadata stores record names/screenshots/timestamps, race
+  records, social counters and entitlement declarations in six bounded local
+  tables. Explicit initialization creates empty local history without grants;
+  partial or malformed history fails. Metadata operations can share one atomic
+  repository batch with related progression changes. The response requires the
+  authenticated persona and a single committed generation. Gameplay reward and
+  social mutation policies are outside this read service.
 - Startup groups own a single authenticated member, fresh injected identifiers,
   and create/mesh/finalize/initialize transitions. Public and private group
   requests have explicit validation; setup fields come from current identity,
