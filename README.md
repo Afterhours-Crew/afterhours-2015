@@ -57,6 +57,11 @@ The initial matchmaking diagnostic uses bounded local search policy and accepted
 session IDs. Its notification publishes only after a complete write; retries do
 not publish twice. It does not allocate a world or assert a successful match.
 
+The world setup service constructs the complete typed setup from bounded deployment
+policy, accepted player state, fresh allocation and injected match measurements.
+It retains no recorded reply. Publication waits for the complete write; failed
+writes and premature retries invalidate the world.
+
 ## License
 
 This repository is licensed under the Mozilla Public License, version 2.0. See

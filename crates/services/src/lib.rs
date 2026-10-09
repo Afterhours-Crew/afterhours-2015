@@ -43,3 +43,4 @@ pub mod world_readiness;
 pub mod matchmaking_status;
 pub mod world_attributes;
 pub mod world_connection;
+pub mod world_setup;
