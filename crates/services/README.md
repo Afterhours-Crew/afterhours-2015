@@ -2,6 +2,12 @@
 
 State-owned services built on the storage port and typed protocol models.
 
+Daily challenge reads join an explicit local catalog/period with current durable
+account progress, obtained awards and monthly ranks. Empty local history grants
+nothing. Reads preserve state, and validated state operations can share atomic
+progression batches. Period/time values remain opaque configuration; automatic
+rotation and gameplay reward policies are not inferred by this service.
+
 - Client-state acknowledgement validates a complete canonical request and returns
   an empty reply with its correlation. Only modes 1/3 with normal status are
   accepted; this reports no menu-readiness or persistent-state transition.
