@@ -346,7 +346,7 @@ impl SqliteRepository {
         }
         Ok(())
     }
-    fn snapshot_in(conn: &Connection, account: AccountId) -> Result<Snapshot, Error> {
+    pub(crate) fn snapshot_in(conn: &Connection, account: AccountId) -> Result<Snapshot, Error> {
         Self::check(conn, account)?;
         let (generation, updated_at) = Self::read_meta(conn)?;
         let items = Self::read_items(conn)?;
@@ -428,8 +428,21 @@ impl InventoryRepository for SqliteRepository {
     fn apply(&self, account: AccountId, batch: &Batch, now: Timestamp) -> Result<Applied, Error> {
         let mut conn = self.connect(account, false)?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        Self::check(&tx, account)?;
-        let (generation, _) = Self::read_meta(&tx)?;
+        let result = Self::apply_in(&tx, account, batch, now)?;
+        tx.commit()?;
+        Ok(result)
+    }
+}
+
+impl SqliteRepository {
+    pub(crate) fn apply_in(
+        tx: &Transaction<'_>,
+        account: AccountId,
+        batch: &Batch,
+        now: Timestamp,
+    ) -> Result<Applied, Error> {
+        Self::check(tx, account)?;
+        let (generation, _) = Self::read_meta(tx)?;
         let recorded: Option<i64> = tx
             .query_row(
                 "SELECT generation FROM batch WHERE id=?1",
@@ -444,12 +457,12 @@ impl InventoryRepository for SqliteRepository {
             Decision::Replay(applied) => return Ok(applied),
             Decision::Apply { next_generation } => next_generation,
         };
-        let items = Self::read_items(&tx)?;
+        let items = Self::read_items(tx)?;
         let next = transition(&items, batch)?;
-        let garage = transition_garage(Self::read_garage(&tx)?, &next, batch)?;
-        crate::tables::transition(&Self::read_tables(&tx)?, &batch.ops)?;
+        let garage = transition_garage(Self::read_garage(tx)?, &next, batch)?;
+        crate::tables::transition(&Self::read_tables(tx)?, &batch.ops)?;
         for op in &batch.ops {
-            Self::write_op(&tx, op)?;
+            Self::write_op(tx, op)?;
         }
         let count: i64 = tx.query_row("SELECT count(*) FROM item", [], |r| r.get(0))?;
         if usize::try_from(count).map_err(|_| Error::Storage)? != next.len() {
@@ -479,8 +492,7 @@ impl InventoryRepository for SqliteRepository {
             "DELETE FROM batch WHERE generation<=(SELECT generation FROM batch ORDER BY generation DESC LIMIT 1 OFFSET ?1)",
             params![i64::try_from(MAX_BATCH_HISTORY).map_err(|_| Error::Config)?],
         )?;
-        tx.commit()?;
-        // Commit is complete before the caller can acknowledge anything.
+        // The enclosing operation must commit before acknowledging anything.
         Ok(Applied {
             generation: next_generation,
             replayed: false,

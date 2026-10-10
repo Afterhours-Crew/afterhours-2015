@@ -67,7 +67,7 @@ fn identity(value: &Value, account: AccountId) -> Result<Identity, Error> {
     }
     Ok(identity)
 }
-fn validate(kind: Kind, value: &Value, account: AccountId) -> Result<(), Error> {
+pub(crate) fn validate(kind: Kind, value: &Value, account: AccountId) -> Result<(), Error> {
     let valid = match kind {
         Kind::Identity => identity(value, account).is_ok(),
         Kind::Entitlements => entitlements::State::from_json(value, account).is_ok(),

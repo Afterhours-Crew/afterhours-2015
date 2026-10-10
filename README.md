@@ -42,7 +42,8 @@ cargo test --workspace --locked
 Once the toolchain and dependencies are cached, add `--offline` to Cargo build,
 Clippy and test commands. No private repository, account profile or recording is
 needed. Passing these tests establishes the covered component behavior, not
-offline play or launcher independence. Fresh-account initialization, complete
+offline play or launcher independence. The account creation command generates
+independent local identities and state; client startup with that state, complete
 garage mutations and launcher independence remain unfinished.
 
 The world attribute service consumes a committed readiness permit, validates the

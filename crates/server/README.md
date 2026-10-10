@@ -11,8 +11,8 @@ routes are reported rather than answered with invented success. A successful
 start or automated test does not establish complete gameplay or launcher
 independence. The repository does not distribute game content or an account
 profile; running a compatible garage requires the operator's separately
-prepared content and state. Fresh-account initialization and several garage
-mutations are still incomplete.
+prepared content and state. The local account creation command is available;
+the complete prologue and several garage mutations are still incomplete.
 
 ## Build and start
 
@@ -57,7 +57,41 @@ its revision survives migration and the old file is left intact.
 On subsequent starts these five import options may be omitted. Database values
 take precedence even when an import path is provided, changed or no longer exists.
 Missing or malformed database state fails startup rather than creating guessed
-defaults. The account generator and complete fresh-career flow remain unfinished.
+defaults.
+
+## Create a local account
+
+The one-shot command uses OS randomness for a new storage key and distinct local
+persona/account IDs. It opens no listeners and contacts no external services:
+
+```sh
+nfs-server create-account --name "New Driver" --state-directory artifacts/new-account --account-policy config/account-policy.json --item-content config/items.json --persistent-content config/tables.json
+```
+
+All paths follow the current directory. The parent of `--state-directory` must
+exist and the final directory must be new. Names are nonempty UTF-8, at most 32
+bytes, with no control characters. The JSON result contains `created: true` and
+the `local_account` key to use with the ordinary server command. Preserve this
+directory; a repeated creation command refuses to replace it.
+
+The account policy has exactly `format: "nfs-fresh-account-policy"`, `version: 1`,
+`build_sha256`, `screenshot_count_max`, and `entitlements`. The latter contains
+`scopes` and `grants`, using the [entitlement state schema](../services/src/entitlements.rs)
+with `id` and `persona_id` omitted from each grant. Grant IDs are newly allocated;
+these supported grants are account-wide, with persona zero. Dates, status and
+counts are explicit local license policy. No base-game or DLC entitlement list
+is bundled or inferred from an existing profile.
+
+Creation validates all content in memory, initializes inventory through the Items
+recipe and progression through typed asset defaults, then commits them together
+with identity, grants, empty settings, zero screenshot counters, no winner and
+empty speedwall rows in one SQLite transaction. Existing stores are ineligible.
+An allocated directory can remain after an I/O failure for diagnosis. Initial
+vehicle choice follows the configured recipe and existing local garage policy.
+
+This provides independent local state, not the official prologue award flow.
+Empty menu state and first-login behavior still require client validation; missing
+winner/speedwall responses retain their existing unsupported classification.
 
 ## Configuration contract
 

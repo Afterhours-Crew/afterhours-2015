@@ -18,6 +18,9 @@ async workers. `MemoryRepository` and `SqliteRepository` implement the same
   values; the storage adapter knows no protocol replies. Missing domains can be
   imported atomically without overwriting existing values. Compare-and-swap
   rejects stale writes; service revisions are independent of inventory generations.
+- Fresh-account publication combines all five service domains with the initial
+  inventory/garage/table batch in one transaction. Only a wholly untouched store
+  is eligible; retries cannot reset existing state or leave half the domains saved.
 - The legacy `settings-<account>.sqlite` file is a read-only migration input.
   Its value and revision are preserved; new settings writes use `<account>.sqlite`.
   Stop older servers before migration. Keep the old file as a backup, but do not

@@ -14,6 +14,7 @@ pub mod content;
 pub mod control;
 pub mod customization_timer;
 pub mod deployment;
+pub mod fresh_account;
 pub mod garage_logic;
 pub mod glass;
 pub mod identity;
