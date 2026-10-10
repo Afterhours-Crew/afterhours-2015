@@ -15,6 +15,8 @@
 //!
 //! The library is synchronous and owns no runtime: a server or launcher calls
 //! it before starting, or from a blocking worker.
+pub mod assets;
+pub mod builds;
 mod cache;
 mod executable;
 mod fingerprint;
@@ -39,25 +41,27 @@ pub const BUILDER_REVISION: u64 = 1;
 /// Executable file name relative to the installation root.
 pub const EXECUTABLE: &str = "NFS16.exe";
 
-/// Executable identity and the build-specific location of embedded data.
+/// Build-specific identifiers of one executable (see `builds/`).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BuildIdentity {
     pub executable_sha256: String,
     /// Relative virtual address of the 64-byte world MAC template.
     pub mac_template_rva: u32,
     pub mac_template_sha256: String,
+    /// Runtime class IDs of Blueprint classes, by class name.
+    pub blueprint_class_ids: BTreeMap<String, u32>,
 }
 
 impl BuildIdentity {
-    /// The supported build. The template bytes are read from the player's
-    /// executable; only their address and digest are known here.
+    /// The profile of the build the content loaders accept
+    /// (`nfs_services::SUPPORTED_BUILD_SHA256`). The template bytes are read
+    /// from the player's executable; only their address and digest are known.
     pub fn supported() -> Self {
-        Self {
-            executable_sha256: nfs_services::SUPPORTED_BUILD_SHA256.into(),
-            mac_template_rva: 0x023E_49C0,
-            mac_template_sha256: "e2afaa1c4773cebd81b0665635d1c79bce021792eec7dbea41f0d5b5344d2d2b"
-                .into(),
-        }
+        // Embedded profiles are validated by the builds tests.
+        builds::profile_for(nfs_services::SUPPORTED_BUILD_SHA256)
+            .ok()
+            .flatten()
+            .expect("the supported build has a valid embedded profile")
     }
 }
 

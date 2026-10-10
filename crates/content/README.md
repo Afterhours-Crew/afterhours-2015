@@ -33,6 +33,23 @@ eight NUL-padded bytes of licence-plate text. Timed discounts have no static
 default. The outputs use the existing versioned formats, so the server's
 loaders and runtime behavior are unchanged.
 
+## Build profiles
+
+Identifiers that belong to one executable build and cannot be read from the
+installed data files live in [`builds/`](builds/README.md), one JSON file per
+build: the executable digest, the MAC template's address and digest, and the
+runtime class IDs of Blueprint classes. `BuildIdentity::supported()` loads the
+profile of the build the loaders accept; adding a build means adding its file.
+
+## Asset identities
+
+`assets::AssetIndex` derives what the client uses to name assets: a bundle's
+scene content key (djb2-xor of its lower-cased path), its asset catalog
+(Blueprint objects in `<bundle>_networkregistry_win32`, counted by class ID)
+and asset references (class ID and position in registry order). A Blueprint
+class without a profiled ID is an error, never a guess. These are inputs for
+world, garage and progression content, which are not generated yet.
+
 Tests build synthetic installations (`nfs-frostbite` `synthetic` feature) and
 cover loader acceptance, cache reuse, damaged and foreign entries, changed
 installations, unsupported executables, wrong template location or digest,

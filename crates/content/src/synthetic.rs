@@ -12,6 +12,9 @@ use nfs_services::persistent::required_tables;
 use std::path::Path;
 
 pub const TEMPLATE_RVA: u32 = 0x1010;
+/// Made-up class IDs for synthetic installations.
+pub const SYNTHETIC_CLASS_IDS: [(&str, u32); 2] =
+    [("LogicPrefabBlueprint", 10), ("RaceVehicleBlueprint", 20)];
 
 /// A minimal PE image with one `.data` section holding a 64-byte template.
 pub fn executable(template: &[u8; 64]) -> Vec<u8> {
@@ -208,7 +211,63 @@ pub fn assets() -> Vec<Asset> {
     for (i, (name, secondary, count)) in required_tables().iter().enumerate() {
         assets.push(table(i as u8, name, secondary.is_some(), *count));
     }
+    assets.extend(registries());
     assets
+}
+
+/// Bundle whose registry lists two prefabs, a vehicle and a non-Blueprint object.
+pub const REGISTRY_BUNDLE: &str = "levels/synthetic/gameplay";
+/// Bundle whose registry lists a Blueprint class with no profiled class ID.
+pub const UNPROFILED_BUNDLE: &str = "levels/synthetic/unprofiled";
+
+fn blueprint(seed: u8, name: &str, class: &str) -> Asset {
+    Asset {
+        name: name.into(),
+        partition: PartitionWriter::default().build(
+            guid(seed),
+            class,
+            guid(seed | 0x10),
+            vec![("Name", Field::CString(name.into()))],
+        ),
+    }
+}
+
+fn registry(seed: u8, bundle: &str, objects: Vec<([u8; 16], [u8; 16])>) -> Asset {
+    let name = format!("{bundle}_networkregistry_win32");
+    Asset {
+        partition: PartitionWriter::default().build(
+            guid(seed),
+            "NetworkRegistryAsset",
+            guid(seed | 0x10),
+            vec![
+                ("Name", Field::CString(name.clone())),
+                ("Objects", Field::Imports(objects)),
+            ],
+        ),
+        name,
+    }
+}
+
+/// Blueprint assets and two bundle registries over them.
+pub fn registries() -> Vec<Asset> {
+    let object = |seed: u8| (guid(seed), guid(seed | 0x10));
+    vec![
+        blueprint(0x60, "prefabs/first", "LogicPrefabBlueprint"),
+        blueprint(0x61, "vehicles/synthetic", "RaceVehicleBlueprint"),
+        blueprint(0x62, "prefabs/second", "LogicPrefabBlueprint"),
+        blueprint(0x63, "objects/unprofiled", "ObjectBlueprint"),
+        registry(
+            0x64,
+            REGISTRY_BUNDLE,
+            vec![
+                object(0x60),
+                object(0x61),
+                (guid(0x10), guid(0x11)),
+                object(0x62),
+            ],
+        ),
+        registry(0x65, UNPROFILED_BUNDLE, vec![object(0x63)]),
+    ]
 }
 
 /// Write an installation of `assets` under `root`. Returns options whose build
@@ -222,6 +281,10 @@ pub fn write(root: &Path, assets: &[Asset]) -> std::io::Result<(Options, [u8; 64
             executable_sha256: sha256_hex(&image),
             mac_template_rva: TEMPLATE_RVA,
             mac_template_sha256: sha256_hex(&template),
+            blueprint_class_ids: SYNTHETIC_CLASS_IDS
+                .iter()
+                .map(|(c, id)| (c.to_string(), *id))
+                .collect(),
         },
         limits: Limits::default(),
     };
