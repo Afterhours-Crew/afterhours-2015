@@ -22,6 +22,7 @@
 //! remains a separate live acceptance test.
 #![forbid(unsafe_code)]
 
+pub mod account;
 pub mod memory;
 pub mod model;
 pub mod port;

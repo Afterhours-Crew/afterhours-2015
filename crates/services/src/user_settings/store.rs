@@ -36,8 +36,19 @@ impl Store {
             None => Backend::Memory(Mutex::new(content)),
             Some((root, account)) => {
                 let repo = Repository::open_owned_directory(&root).map_err(|_| Error::Storage)?;
+                repo.prepare(account).map_err(|_| Error::Storage)?;
                 if repo.read(account).map_err(|_| Error::Storage)?.is_none() {
-                    repo.compare_exchange(account, None, &encode(&content)?)
+                    let document = match repo.read_legacy(account).map_err(|_| Error::Storage)? {
+                        Some(document) => {
+                            decode(&document.bytes)?;
+                            document
+                        }
+                        None => nfs_storage::settings::Document {
+                            revision: 1,
+                            bytes: encode(&content)?,
+                        },
+                    };
+                    repo.initialize(account, document)
                         .map_err(|_| Error::Storage)?;
                 }
                 decode(

@@ -104,7 +104,7 @@ fn bounded_data_and_foreign_schema_fail_without_modification() {
         .unwrap();
     let path = repo.path(account(1));
     let conn = rusqlite::Connection::open(&path).unwrap();
-    conn.execute_batch("PRAGMA user_version=2").unwrap();
+    conn.execute_batch("PRAGMA user_version=99").unwrap();
     drop(conn);
     let before = std::fs::read(&path).unwrap();
     assert_eq!(repo.read(account(1)), Err(Error::Version));
