@@ -84,6 +84,48 @@ impl PlayerListener {
             })?
             .map(HostRpc::GaragePresence))
     }
+    /// Garage exit: swap the participant's garage car for its world car in one
+    /// section (deletion and creation, absolute origin as for garage cars).
+    /// `None` when no world spawn or garage content is configured.
+    pub(super) fn exit_world_car(
+        players: &mut Players,
+        population: Option<&mut Population>,
+        inventory: Option<&Inventory>,
+        content: Option<&GarageContent>,
+        participant: u16,
+        persona: u64,
+    ) -> Result<Option<Section>, replication::Error> {
+        let (Some(population), Some(inventory), Some(content)) = (population, inventory, content)
+        else {
+            return Ok(None);
+        };
+        if content.layout.world_spawn().is_none() {
+            return Ok(None);
+        }
+        let spawned = population.spawn_world(
+            players,
+            Owner {
+                connection: HOST_SELECTOR as u8,
+                persona,
+                participant,
+            },
+            inventory,
+            &content.vehicles,
+            &content.layout,
+        )?;
+        if !spawned.messages.is_empty() {
+            // The car bundle was registered at garage entry; a new registration
+            // here would need content delivery before the creation.
+            return Err(replication::Error::Unsupported);
+        }
+        Ok(Some(Section {
+            float_bits: None,
+            flag: false,
+            deleted: spawned.deleted,
+            setup: Some(Setup::RawEscape([0; 3])),
+            records: spawned.records,
+        }))
+    }
     pub(super) fn populate(
         players: &mut Players,
         participants: &Lifecycle,

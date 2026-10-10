@@ -684,6 +684,7 @@ impl Listener for PlayerListener {
         }
         let mut launchers = self.launchers.clone();
         let mut unsupported = 0;
+        let mut exit_entries = Vec::new();
         for body in rpcs {
             match Self::item_builder_begin(self.roles.as_ref(), &players, self.persona, body) {
                 Ok(true) => continue,
@@ -728,15 +729,14 @@ impl Listener for PlayerListener {
                         players.owns_participant(HOST_SELECTOR as u8, self.persona, id)
                     }) {
                         Ok(nfs_world::participants::Outcome::Advanced(replies)) => {
-                            let start = responses.len();
-                            responses.extend(
-                                replies
-                                    .into_iter()
-                                    .map(nfs_world::participants::HostRpc::Participant),
-                            );
+                            let mut chain: Vec<_> = replies
+                                .into_iter()
+                                .map(nfs_world::participants::HostRpc::Participant)
+                                .collect();
+                            let exited = participants.take_exited();
                             // Official order: presence off follows the leave of
                             // customization and state 94 (E747).
-                            for participant in participants.take_exited() {
+                            for &participant in &exited {
                                 match Self::garage_presence_leave(
                                     self.roles.as_ref(),
                                     &players,
@@ -744,9 +744,7 @@ impl Listener for PlayerListener {
                                     participant,
                                     self.persona,
                                 ) {
-                                    Ok(Some(rpc)) => {
-                                        responses.insert((start + 3).min(responses.len()), rpc);
-                                    }
+                                    Ok(Some(rpc)) => chain.insert(3.min(chain.len()), rpc),
                                     Ok(None) => {}
                                     Err(error) => {
                                         self.refused += 1;
@@ -754,10 +752,37 @@ impl Listener for PlayerListener {
                                         return false;
                                     }
                                 }
+                            }
+                            let world_car = match exited.as_slice() {
+                                [participant] => match Self::exit_world_car(
+                                    &mut players,
+                                    population.as_mut(),
+                                    self.inventory.as_ref(),
+                                    self.vehicles.as_deref(),
+                                    *participant,
+                                    self.persona,
+                                ) {
+                                    Ok(section) => section,
+                                    Err(error) => {
+                                        self.refused += 1;
+                                        self.last_error = Some(error);
+                                        return false;
+                                    }
+                                },
+                                _ => None,
+                            };
+                            for &participant in &exited {
                                 tracing::info!(
                                     participant,
+                                    world_car = world_car.is_some(),
                                     "owned garage exit granted; participant loads the world (startup state 77)"
                                 );
+                            }
+                            match world_car {
+                                // The official exit frame carries the car swap and
+                                // the state chain together (E748).
+                                Some(section) => exit_entries.push((section, chain)),
+                                None => responses.extend(chain),
                             }
                         }
                         Ok(nfs_world::participants::Outcome::Repeated) => {}
@@ -926,6 +951,16 @@ impl Listener for PlayerListener {
                 }
             }
         }
+        for (section, replies) in &exit_entries {
+            if !nfs_world::session::replication_frame(section, replies, 0)
+                .is_ok_and(|wire| wire.len() <= nfs_world::application::OUTBOUND_FRAME_BITS)
+            {
+                self.refused += 1;
+                self.last_error = Some(replication::Error::Bound);
+                return false;
+            }
+        }
+        entries.extend(exit_entries);
         if let Err(error) = Self::bind_progression_launchers(
             self.progression.as_deref(),
             &players,
