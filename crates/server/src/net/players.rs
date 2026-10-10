@@ -490,6 +490,16 @@ impl PlayerListener {
         }
         let mut participants = self.participants.clone();
         participants.bind(&records, roles.gameplay, roles.startup)?;
+        match participants.bind_exit(&records, roles.startup, roles.garage) {
+            Ok(true) => {}
+            Ok(false) => tracing::info!("garage exit scenes absent; garage exit stays unsupported"),
+            Err(error) => {
+                tracing::warn!(
+                    ?error,
+                    "garage exit endpoints unbound; garage exit stays unsupported"
+                )
+            }
+        }
         let sections = split_scenes(records, nfs_world::application::OUTBOUND_FRAME_BITS)?;
         if sections.len() > MAX_PENDING - self.pending.len() {
             return Err(replication::Error::Bound);
@@ -717,12 +727,39 @@ impl Listener for PlayerListener {
                     match participants.receive(body, |id| {
                         players.owns_participant(HOST_SELECTOR as u8, self.persona, id)
                     }) {
-                        Ok(nfs_world::participants::Outcome::Advanced(replies)) => responses
-                            .extend(
+                        Ok(nfs_world::participants::Outcome::Advanced(replies)) => {
+                            let start = responses.len();
+                            responses.extend(
                                 replies
                                     .into_iter()
                                     .map(nfs_world::participants::HostRpc::Participant),
-                            ),
+                            );
+                            // Official order: presence off follows the leave of
+                            // customization and state 94 (E747).
+                            for participant in participants.take_exited() {
+                                match Self::garage_presence_leave(
+                                    self.roles.as_ref(),
+                                    &players,
+                                    &mut garage_presence,
+                                    participant,
+                                    self.persona,
+                                ) {
+                                    Ok(Some(rpc)) => {
+                                        responses.insert((start + 3).min(responses.len()), rpc);
+                                    }
+                                    Ok(None) => {}
+                                    Err(error) => {
+                                        self.refused += 1;
+                                        self.last_error = Some(error);
+                                        return false;
+                                    }
+                                }
+                                tracing::info!(
+                                    participant,
+                                    "owned garage exit granted; participant loads the world (startup state 77)"
+                                );
+                            }
+                        }
                         Ok(nfs_world::participants::Outcome::Repeated) => {}
                         Ok(nfs_world::participants::Outcome::Unsupported) => unsupported += 1,
                         Err(error) => {
@@ -907,6 +944,16 @@ impl Listener for PlayerListener {
         {
             self.refused += 1;
             return false;
+        }
+        for participant in participants.in_free_roam() {
+            if self.participants.stage(participant)
+                != Some(nfs_world::participants::Stage::FreeRoam)
+            {
+                tracing::info!(
+                    participant,
+                    "owned world entry completed; participant entered FreeRoam state 2 (world vehicle not modeled)"
+                );
+            }
         }
         self.players = players;
         self.launchers = launchers;

@@ -28,34 +28,12 @@ impl PlayerListener {
         presence: &mut nfs_world::garage::presence::Presence,
         persona: u64,
     ) -> Result<Vec<HostRpc>, replication::Error> {
-        use nfs_world::{
-            garage::presence::COMPONENT,
-            participants::Endpoint,
-            replication::{Initial, sublevel},
-        };
         let mut out = Vec::new();
         for reply in replies {
             let HostRpc::Vehicle(vehicle) = reply else {
                 continue;
             };
-            let scene = players
-                .objects()
-                .scene(roles.ok_or(replication::Error::Unsupported)?.garage)
-                .ok_or(replication::Error::UnknownObject)?;
-            let Some(Initial::SubLevel { fields, .. }) =
-                players.objects().get(scene).map(|o| &o.initial)
-            else {
-                return Err(replication::Error::TypeMismatch);
-            };
-            let Some(sublevel::Initial::RpcBool { rpc, value: false }) = fields.get(COMPONENT)
-            else {
-                return Err(replication::Error::TypeMismatch);
-            };
-            let endpoint = Endpoint {
-                scene,
-                selector: rpc.selector,
-                serial: rpc.serial,
-            };
+            let endpoint = Self::presence_endpoint(roles, players)?;
             if let Some(notification) = presence.set(endpoint, vehicle.participant, true, |id| {
                 players.owns_participant(HOST_SELECTOR as u8, persona, id)
             })? {
@@ -63,6 +41,48 @@ impl PlayerListener {
             }
         }
         Ok(out)
+    }
+    fn presence_endpoint(
+        roles: Option<&crate::scene_roles::SceneRoles>,
+        players: &Players,
+    ) -> Result<nfs_world::participants::Endpoint, replication::Error> {
+        use nfs_world::{
+            garage::presence::COMPONENT,
+            participants::Endpoint,
+            replication::{Initial, sublevel},
+        };
+        let scene = players
+            .objects()
+            .scene(roles.ok_or(replication::Error::Unsupported)?.garage)
+            .ok_or(replication::Error::UnknownObject)?;
+        let Some(Initial::SubLevel { fields, .. }) =
+            players.objects().get(scene).map(|o| &o.initial)
+        else {
+            return Err(replication::Error::TypeMismatch);
+        };
+        let Some(sublevel::Initial::RpcBool { rpc, value: false }) = fields.get(COMPONENT) else {
+            return Err(replication::Error::TypeMismatch);
+        };
+        Ok(Endpoint {
+            scene,
+            selector: rpc.selector,
+            serial: rpc.serial,
+        })
+    }
+    /// A participant leaving the garage: presence off when it was the last one.
+    pub(super) fn garage_presence_leave(
+        roles: Option<&crate::scene_roles::SceneRoles>,
+        players: &Players,
+        presence: &mut nfs_world::garage::presence::Presence,
+        participant: u16,
+        persona: u64,
+    ) -> Result<Option<HostRpc>, replication::Error> {
+        let endpoint = Self::presence_endpoint(roles, players)?;
+        Ok(presence
+            .set(endpoint, participant, false, |id| {
+                players.owns_participant(HOST_SELECTOR as u8, persona, id)
+            })?
+            .map(HostRpc::GaragePresence))
     }
     pub(super) fn populate(
         players: &mut Players,
