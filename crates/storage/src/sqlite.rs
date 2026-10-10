@@ -34,15 +34,15 @@ use std::{
 /// `NFSD`: one file per account, domains
 /// added by schema version.
 const APPLICATION_ID: i64 = 0x4e46_5344;
-/// Version 3 adds persistent tables; versions 1/2 retain inventory and garage.
-pub const VERSION: i64 = 3;
-const TABLES: i64 = 4;
+/// Version 4 consolidates service state into the inventory account database.
+pub const VERSION: i64 = 4;
+const TABLES: i64 = 9;
 /// 4096-byte pages: 64 MiB, above the worst-case item set.
 const MAX_PAGES: i64 = 16384;
 const MAX_FILE_BYTES: u64 = 64 * 1024 * 1024;
 const JOURNAL_SIZE_LIMIT: i64 = 1024 * 1024;
 const BUSY_TIMEOUT: Duration = Duration::from_millis(100);
-const MAX_VALUE_BYTES: i32 = 192 * 1024;
+const MAX_VALUE_BYTES: i32 = 512 * 1024 + 1024;
 const MAX_SQL_BYTES: i32 = 16 * 1024;
 const MAX_LIST_BYTES: usize = MAX_NESTED * 8;
 
@@ -77,7 +77,7 @@ impl SqliteRepository {
     pub fn path(&self, account: AccountId) -> PathBuf {
         self.root.join(format!("{}.sqlite", account.hex()))
     }
-    fn connect(&self, account: AccountId, create: bool) -> Result<Connection, Error> {
+    pub(crate) fn connect(&self, account: AccountId, create: bool) -> Result<Connection, Error> {
         let path = self.path(account);
         match std::fs::symlink_metadata(&path) {
             Ok(m) => {
@@ -85,8 +85,9 @@ impl SqliteRepository {
                     return Err(Error::Config);
                 }
             }
-            Err(_) if create => {}
-            Err(_) => return Err(Error::Absent),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound && create => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Err(Error::Absent),
+            Err(_) => return Err(Error::Storage),
         }
         let mut flags = OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX;
         if create {
@@ -116,7 +117,7 @@ impl SqliteRepository {
         conn.pragma_update(None, "journal_size_limit", JOURNAL_SIZE_LIMIT)?;
         Ok(conn)
     }
-    fn check(conn: &Connection, account: AccountId) -> Result<(), Error> {
+    pub(crate) fn check(conn: &Connection, account: AccountId) -> Result<(), Error> {
         Self::check_version(conn, account, VERSION)
     }
     fn check_version(conn: &Connection, account: AccountId, expected: i64) -> Result<(), Error> {
@@ -130,7 +131,13 @@ impl SqliteRepository {
             [],
             |r| r.get(0),
         )?;
-        if tables != if expected < 3 { 3 } else { TABLES } {
+        let expected_tables = match expected {
+            1 | 2 => 3,
+            3 => 4,
+            4 => TABLES,
+            _ => return Err(Error::Version),
+        };
+        if tables != expected_tables {
             return Err(Error::Version);
         }
         let rows: i64 = conn.query_row("SELECT count(*) FROM meta", [], |r| r.get(0))?;
@@ -382,10 +389,23 @@ impl InventoryRepository for SqliteRepository {
             Self::migrate_v3(&tx, account)?;
         } else if version == 2 {
             Self::migrate_v3(&tx, account)?;
+        } else if version == 3 {
+            Self::check_version(&tx, account, 3)?;
         } else if version > VERSION {
             return Err(Error::Version);
         } else {
             Self::check(&tx, account)?;
+        }
+        if version < 4 {
+            Self::check_version(&tx, account, 3)?;
+            Self::read_meta(&tx)?;
+            let items = Self::read_items(&tx)?;
+            if let Some(garage) = Self::read_garage(&tx)? {
+                garage.validate_items(&items).map_err(|_| Error::Config)?;
+            }
+            Self::read_tables(&tx)?;
+            crate::account::create_tables(&tx)?;
+            tx.pragma_update(None, "user_version", VERSION)?;
         }
         tx.commit()?;
         // WAL only after schema and ownership acceptance; it persists in the file.

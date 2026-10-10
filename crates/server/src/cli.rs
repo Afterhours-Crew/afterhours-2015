@@ -154,33 +154,26 @@ fn parse_from(mut args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args
     if !(1..=3600).contains(&idle_seconds) || !(1..=86_400).contains(&qos_seconds) {
         return Err("idle must be 1..3600 s and qos 1..86400 s".into());
     }
-    if entitlement_state.is_some()
-        && (local_account.is_none() || auth_config.is_none() || local_identity.is_none())
-    {
+    if entitlement_state.is_some() && (local_account.is_none() || auth_config.is_none()) {
         return Err("--entitlement-state requires owned authentication and --local-account".into());
     }
     if (kickback_state.is_some() || speedwall_state.is_some())
-        && (local_account.is_none() || auth_config.is_none() || local_identity.is_none())
+        && (local_account.is_none() || auth_config.is_none())
     {
         return Err("--kickback-state and --speedwall-state require owned authentication and --local-account".into());
     }
     if owned_only
         && (auth_config.is_none()
-            || local_identity.is_none()
             || bootstrap_config.is_none()
             || group_policy.is_none()
             || matchmaking_admission.is_none()
             || matchmaking_policy.is_none()
             || world_policy.is_none()
             || control_catalogs.is_none()
-            || entitlement_state.is_none()
-            || user_settings.is_none()
             || stat_definitions.is_none()
             || !owned_menu_awards
             || challenge_content.is_none()
             || !owned_local_social
-            || kickback_state.is_none()
-            || speedwall_state.is_none()
             || item_licenses.is_none())
     {
         return Err(
@@ -228,12 +221,9 @@ fn parse_from(mut args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args
         return Err("--challenge-content requires owned --item-content and account storage".into());
     }
     if (auth_config.is_some() || local_identity.is_some())
-        && !(auth_config.is_some()
-            && local_identity.is_some()
-            && item_content.is_some()
-            && bootstrap_config.is_some())
+        && !(auth_config.is_some() && item_content.is_some() && bootstrap_config.is_some())
     {
-        return Err("--auth-config and --local-identity require each other, owned Items/account storage and --bootstrap-config".into());
+        return Err("--auth-config requires owned Items/account storage and --bootstrap-config; --local-identity is an optional import".into());
     }
     Ok(Args {
         root,
@@ -349,7 +339,7 @@ pub fn main() -> std::process::ExitCode {
         .is_some_and(|a| a == "--help" || a == "-h")
     {
         println!(
-            "nfs-server: owned local NFS 2015 services\n\nUsage: nfs-server --root <data-directory> --output <new-recording-directory> [configuration options]\n\nRequired control configuration: --bootstrap-config, --auth-config, --local-identity,\n--group-policy, --matchmaking-admission, --matchmaking-policy, --world-policy,\n--control-catalogs, --entitlement-state, --user-settings, --stat-definitions,\n--challenge-content, --kickback-state, --speedwall-state, --item-licenses,\n--owned-local-social and --owned-menu-awards.\n\nGarage configuration: --world-content (version 4), --world-mac-template,\n--item-content, --state-directory, --local-account, --persistent-content,\n--progression-content, --vehicle-content, --garage-layout, --sequence-content,\n--garage-logic.\n\nOptional: --redirector-port, --idle-seconds, --qos-seconds, --stop-file.\nAll listeners are loopback. No manifest, captured reply store or external\nauthentication is used. See crates/server/README.md for schemas and limitations."
+            "nfs-server: owned local NFS 2015 services\n\nUsage: nfs-server --root <data-directory> --output <new-recording-directory> [configuration options]\n\nRequired control configuration: --bootstrap-config, --auth-config,\n--group-policy, --matchmaking-admission, --matchmaking-policy, --world-policy,\n--control-catalogs, --stat-definitions, --challenge-content, --item-licenses,\n--owned-local-social and --owned-menu-awards.\n\nGarage configuration: --world-content (version 4), --world-mac-template,\n--item-content, --state-directory, --local-account, --persistent-content,\n--progression-content, --vehicle-content, --garage-layout, --sequence-content,\n--garage-logic.\n\nAccount state is read from SQLite. Optional one-time imports: --local-identity,\n--entitlement-state, --kickback-state, --speedwall-state, --user-settings.\n\nOptional: --redirector-port, --idle-seconds, --qos-seconds, --stop-file.\nAll listeners are loopback. No manifest, captured reply store or external\nauthentication is used. See crates/server/README.md for schemas and limitations."
         );
         return std::process::ExitCode::SUCCESS;
     }
@@ -386,28 +376,35 @@ pub fn main() -> std::process::ExitCode {
 }
 
 async fn run(args: Args) -> Result<(), Failure> {
-    let auth = match (&args.auth_config, &args.local_identity) {
-        (Some(config), Some(identity)) => {
-            let config = nfs_services::authentication::Config::load(&args.root.join(config))
-                .map_err(nfs_server::content_failure)?;
-            let identity = nfs_services::authentication::Identity::load(&args.root.join(identity))
-                .map_err(nfs_server::content_failure)?;
-            if Some(identity.storage_account()) != args.local_account {
-                return Err(Failure::ProfileConfig);
-            }
-            Some((config, identity))
-        }
-        _ => None,
-    };
     let inventory = inventory_config(&args)?;
+    let account = args.local_account.ok_or(Failure::ProfileConfig)?;
+    let root = args.root.join(
+        args.state_directory
+            .as_ref()
+            .ok_or(Failure::ProfileConfig)?,
+    );
+    let imports = nfs_services::account_state::Imports {
+        identity: args.local_identity.as_ref().map(|p| args.root.join(p)),
+        entitlements: args.entitlement_state.as_ref().map(|p| args.root.join(p)),
+        kickback: args.kickback_state.as_ref().map(|p| args.root.join(p)),
+        speedwall: args.speedwall_state.as_ref().map(|p| args.root.join(p)),
+        settings: args.user_settings.as_ref().map(|p| args.root.join(p)),
+    };
+    let owned = tokio::task::spawn_blocking(move || {
+        nfs_services::account_state::open(&root, account, &imports)
+    })
+    .await
+    .map_err(|_| Failure::Output)?
+    .map_err(|_| Failure::ProfileConfig)?;
+    let auth_config = args.auth_config.as_ref().ok_or(Failure::ProfileConfig)?;
+    let auth_config = nfs_services::authentication::Config::load(&args.root.join(auth_config))
+        .map_err(nfs_server::content_failure)?;
     let mut pack = Deployment::new();
     if let Some(path) = &args.world_mac_template {
         let bytes = std::fs::read(args.root.join(path)).map_err(|_| Failure::Output)?;
         pack = pack.with_world_mac_template(&bytes)?;
     }
-    if let Some((config, identity)) = auth {
-        pack = pack.with_authentication(config, identity)?;
-    }
+    pack = pack.with_authentication(auth_config, owned.identity)?;
     if let Some(path) = &args.bootstrap_config {
         pack = pack.with_bootstrap(
             nfs_services::bootstrap::Config::load(&args.root.join(path))
@@ -477,48 +474,9 @@ async fn run(args: Args) -> Result<(), Failure> {
         .map(|path| nfs_server::garage_logic::GarageLogic::load(&args.root.join(path)))
         .transpose()?
         .map(Arc::new);
-    let entitlements = match &args.entitlement_state {
-        Some(path) => {
-            let account = args.local_account.ok_or(Failure::ProfileConfig)?;
-            let path = args.root.join(path);
-            let state = tokio::task::spawn_blocking(move || {
-                nfs_services::entitlements::State::load(&path, account)
-            })
-            .await
-            .map_err(|_| Failure::Output)?
-            .map_err(|_| Failure::ProfileConfig)?;
-            Some((account, Arc::new(state)))
-        }
-        None => None,
-    };
-    let kickback = match &args.kickback_state {
-        Some(path) => {
-            let account = args.local_account.ok_or(Failure::ProfileConfig)?;
-            let path = args.root.join(path);
-            let state = tokio::task::spawn_blocking(move || {
-                nfs_services::kickback::State::load(&path, account)
-            })
-            .await
-            .map_err(|_| Failure::Output)?
-            .map_err(|_| Failure::ProfileConfig)?;
-            Some((account, Arc::new(state)))
-        }
-        None => None,
-    };
-    let speedwall = match &args.speedwall_state {
-        Some(path) => {
-            let account = args.local_account.ok_or(Failure::ProfileConfig)?;
-            let path = args.root.join(path);
-            let state = tokio::task::spawn_blocking(move || {
-                nfs_services::speedwall::State::load(&path, account)
-            })
-            .await
-            .map_err(|_| Failure::Output)?
-            .map_err(|_| Failure::ProfileConfig)?;
-            Some((account, Arc::new(state)))
-        }
-        None => None,
-    };
+    let entitlements = Some((account, Arc::new(owned.entitlements)));
+    let kickback = Some((account, Arc::new(owned.kickback)));
+    let speedwall = Some((account, Arc::new(owned.speedwall)));
     let item_licenses = match &args.item_licenses {
         Some(path) => {
             let path = args.root.join(path);
@@ -547,38 +505,7 @@ async fn run(args: Args) -> Result<(), Failure> {
         }
         None => None,
     };
-    let user_settings = match &args.user_settings {
-        Some(path) => {
-            let content_path = args.root.join(path);
-            let durable = args
-                .state_directory
-                .as_ref()
-                .zip(args.local_account)
-                .map(|(directory, account)| (args.root.join(directory), account));
-            let store = tokio::task::spawn_blocking(move || -> Result<_, Failure> {
-                let mut content = nfs_server::user_settings::Settings::load(&content_path)
-                    .map_err(nfs_server::user_settings::failure)?;
-                if let Some((directory, account)) = &durable {
-                    std::fs::create_dir_all(directory).map_err(|_| Failure::Output)?;
-                    let legacy = directory.join(format!("user-settings-{}.json", account.hex()));
-                    if legacy.exists()
-                        && !directory
-                            .join(format!("settings-{}.sqlite", account.hex()))
-                            .exists()
-                    {
-                        content = nfs_server::user_settings::Settings::load(&legacy)
-                            .map_err(nfs_server::user_settings::failure)?;
-                    }
-                }
-                nfs_server::user_settings::Store::open(content, durable)
-                    .map_err(nfs_server::user_settings::failure)
-            })
-            .await
-            .map_err(|_| Failure::Output)??;
-            Some(Arc::new(store))
-        }
-        None => None,
-    };
+    let user_settings = Some(Arc::new(owned.settings));
     let challenges = args
         .challenge_content
         .as_ref()
@@ -760,7 +687,6 @@ mod tests {
             "--bootstrap-config",
             "--auth-config",
             "--group-policy",
-            "--user-settings",
             "--world-policy",
         ] {
             let mut args = configured();
@@ -779,5 +705,22 @@ mod tests {
             args.extend([flag.into(), value.into()]);
             assert!(parse_from(args.into_iter()).is_err());
         }
+    }
+
+    #[test]
+    fn initialized_account_does_not_require_external_state_documents() {
+        let mut args = configured();
+        for flag in [
+            "--local-identity",
+            "--entitlement-state",
+            "--kickback-state",
+            "--speedwall-state",
+            "--user-settings",
+        ] {
+            let index = args.iter().position(|s| s == flag).unwrap();
+            args.drain(index..index + 2);
+        }
+        assert!(parse_from(args.into_iter()).is_ok());
+        // Existence and schema of persisted state are checked before readiness.
     }
 }

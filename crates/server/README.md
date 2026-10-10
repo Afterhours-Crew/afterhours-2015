@@ -38,12 +38,26 @@ already exist; the final run directory must not. Configuration paths are
 relative to `--root`, or may be absolute. `--state-directory` must be a relative
 path under `artifacts/`, for example `artifacts/state`.
 
-Every configured local account must agree across `--local-identity`,
-`--local-account` and the account-owned state files. The latter is a nonzero
-32-digit hexadecimal storage identifier. Existing SQLite state is durable and
+`--local-account` selects a nonzero 32-digit hexadecimal storage identifier.
+The account database holds identity, entitlement grants, kickback, speedwall,
+settings, inventory, garage slots and progression tables. Existing state is durable and
 must be preserved across restarts. Initial inventory content is applied only
 through the account initialization rules; changing content does not reset an
 existing account.
+
+Stop older servers and back up the state directory before upgrading. Schema v4
+adds the service-state tables without replacing inventory, garage or progression.
+For the first upgrade, the existing `--local-identity`, `--entitlement-state`,
+`--kickback-state`, `--speedwall-state` and `--user-settings` options supply
+validated imports for absent domains. The identity and grants must match the
+selected storage account. All candidate domains validate before any are imported.
+Legacy settings SQLite takes precedence over legacy settings JSON and the seed;
+its revision survives migration and the old file is left intact.
+
+On subsequent starts these five import options may be omitted. Database values
+take precedence even when an import path is provided, changed or no longer exists.
+Missing or malformed database state fails startup rather than creating guessed
+defaults. The account generator and complete fresh-career flow remain unfinished.
 
 ## Configuration contract
 
@@ -56,14 +70,15 @@ The linked loaders define the exact versioned field schemas.
 | Options | Input and schema |
 | --- | --- |
 | `--bootstrap-config` | Local bootstrap values; endpoints are bound from listeners ([loader](../services/src/bootstrap/content.rs)) |
-| `--auth-config`, `--local-identity` | Authentication policy and local account/persona/name ([authentication](../services/src/authentication.rs)) |
+| `--auth-config` | Authentication policy; identity comes from SQLite ([authentication](../services/src/authentication.rs)) |
+| `--local-identity` | Optional one-time account/persona/name import ([account state](../services/src/account_state.rs)) |
 | `--group-policy` | Group configuration ([group](../services/src/group.rs)) |
 | `--matchmaking-admission`, `--matchmaking-policy` | Admission and status policies ([admission](../services/src/matchmaking.rs), [status](../services/src/matchmaking_status.rs)) |
 | `--world-policy` | Allocation/setup policy ([world setup](../services/src/world_setup.rs)) |
 | `--control-catalogs` | Typed static menu/catalog content ([catalogs](../services/src/control_catalogs.rs)) |
-| `--entitlement-state`, `--kickback-state`, `--speedwall-state` | Account-owned local state ([entitlements](../services/src/entitlements.rs), [kickback](../services/src/kickback.rs), [speedwall](../services/src/speedwall.rs)) |
+| `--entitlement-state`, `--kickback-state`, `--speedwall-state` | Optional one-time imports ([entitlements](../services/src/entitlements.rs), [kickback](../services/src/kickback.rs), [speedwall](../services/src/speedwall.rs)) |
 | `--item-licenses` | Static item license definitions ([licenses](../services/src/item_licenses.rs)) |
-| `--user-settings` | Initial settings; durable SQLite values take precedence ([settings](../services/src/user_settings.rs)) |
+| `--user-settings` | Optional initial settings import; durable SQLite values take precedence ([settings](../services/src/user_settings.rs)) |
 | `--stat-definitions`, `--challenge-content` | Definitions used with current account views ([stats](../services/src/stats.rs), [challenges](../services/src/challenges.rs)) |
 | `--owned-menu-awards`, `--owned-local-social` | Enable current award reads and the bounded single-account social model |
 

@@ -76,9 +76,11 @@ requests. This covers a single local member; broader matchmaking remains work.
 Settings use typed per-key changes and account-owned SQLite documents. The edge
 refreshes state before each request, commits changes before success replies and
 keeps committed state when a reply is lost. Bounded compare-and-swap retries merge
-concurrent connections without replacing unrelated keys. Separate versioned
-settings files leave inventory databases unchanged; local content seeds only an
-absent settings store. Filesystem and SQLite work belongs on blocking workers.
+concurrent connections without replacing unrelated keys. Settings share the
+versioned inventory account database with identity, entitlements, kickback and
+speedwall state. Validated imports seed only absent domains; existing database
+values win. The previous standalone settings file is read for migration and
+left intact. Filesystem and SQLite work belongs on blocking workers.
 
 Static control catalogs use named deployment definitions for key scopes, kill
 switches and SpeedList types, plus an explicit disabled limited-feature policy.
@@ -95,7 +97,7 @@ Local social queries encode an explicit eligible-player snapshot and known-empty
 friend recommendations/recent-player history. Callers supply and refresh current
 directory state; an unknown or nonempty history never becomes an empty success.
 
-Entitlement reads use a bounded versioned account-state document with named grants
+Entitlement reads use a bounded versioned account-state record with named grants
 and supported group scopes. Current authenticated account/persona checks precede
 query selection, and stable grant IDs survive reopening. General search and grant
 mutations remain unsupported; existing state is never rewritten by a read.
