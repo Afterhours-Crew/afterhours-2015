@@ -33,6 +33,68 @@ fn doc(revision: u64, bytes: &[u8]) -> Document {
 }
 
 #[test]
+fn fresh_account_domains_and_inventory_publish_atomically_and_cannot_reset_state() {
+    use nfs_storage::{Batch, GarageSlots, ItemId, Op, Timestamp};
+    let root = Root::new();
+    let repo = Repository::open_owned_directory(&root.0).unwrap();
+    let a = account(1);
+    let documents: Vec<_> = Kind::ALL
+        .into_iter()
+        .map(|k| (k, doc(1, b"owned")))
+        .collect();
+    let mut batch = Batch {
+        id: 17,
+        expected_generation: 0,
+        ops: vec![Op::SetGarage(GarageSlots([
+            Some(ItemId::new(7).unwrap()),
+            None,
+            None,
+            None,
+            None,
+        ]))],
+    };
+    assert_eq!(
+        repo.initialize_fresh(a, &documents, &batch, Timestamp(1)),
+        Err(Error::DanglingReference)
+    );
+    for kind in Kind::ALL {
+        assert!(repo.read(a, kind).unwrap().is_none());
+    }
+    let inventory = SqliteRepository::open_owned_directory(&root.0).unwrap();
+    assert_eq!(inventory.snapshot(a).unwrap().generation, 0);
+    batch.ops = vec![Op::SetGarage(GarageSlots::default())];
+    repo.initialize_fresh(a, &documents, &batch, Timestamp(2))
+        .unwrap();
+    let saved = inventory.snapshot(a).unwrap();
+    assert_eq!(saved.generation, 1);
+    for kind in Kind::ALL {
+        assert_eq!(repo.read(a, kind).unwrap(), Some(doc(1, b"owned")));
+    }
+    assert_eq!(
+        repo.initialize_fresh(a, &documents, &batch, Timestamp(3)),
+        Err(Error::Conflict)
+    );
+    assert_eq!(inventory.snapshot(a).unwrap(), saved);
+    assert_eq!(
+        repo.initialize_fresh(account(2), &documents[..4], &batch, Timestamp(3)),
+        Err(Error::Invalid)
+    );
+    // A partially imported account is also ineligible, even at generation zero.
+    let b = account(3);
+    repo.initialize(b, &[(Kind::Settings, doc(1, b"previous"))])
+        .unwrap();
+    assert_eq!(
+        repo.initialize_fresh(b, &documents, &batch, Timestamp(3)),
+        Err(Error::Conflict)
+    );
+    assert!(repo.read(b, Kind::Identity).unwrap().is_none());
+    assert_eq!(
+        repo.read(b, Kind::Settings).unwrap(),
+        Some(doc(1, b"previous"))
+    );
+}
+
+#[test]
 fn domains_share_account_file_preserve_inventory_and_ignore_reimport() {
     let root = Root::new();
     let inventory = SqliteRepository::open_owned_directory(&root.0).unwrap();

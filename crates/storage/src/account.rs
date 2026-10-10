@@ -5,7 +5,7 @@
 //! Bounded service state in the same account database as inventory and tables.
 //! Domain codecs validate/serialize these values; storage never contains wire
 //! replies. Revisions prevent stale sessions from overwriting committed state.
-use crate::{AccountId, Error, InventoryRepository, SqliteRepository};
+use crate::{AccountId, Applied, Batch, Error, InventoryRepository, SqliteRepository, Timestamp};
 use rusqlite::{Connection, OptionalExtension, Transaction, TransactionBehavior, params};
 use std::{
     collections::BTreeSet,
@@ -106,6 +106,54 @@ pub struct Repository {
     inventory: SqliteRepository,
 }
 impl Repository {
+    /// Publish all account domains and initial inventory/tables together. Only
+    /// an untouched store is eligible; this cannot reset or reseed an account.
+    pub fn initialize_fresh(
+        &self,
+        account: AccountId,
+        documents: &[(Kind, Document)],
+        batch: &Batch,
+        now: Timestamp,
+    ) -> Result<Applied, Error> {
+        let mut kinds = BTreeSet::new();
+        for (kind, document) in documents {
+            if !kinds.insert(*kind) || document.revision != 1 {
+                return Err(Error::Invalid);
+            }
+            validate(*kind, document.revision, &document.bytes)?;
+        }
+        if kinds != Kind::ALL.into_iter().collect() || batch.expected_generation != 0 {
+            return Err(Error::Invalid);
+        }
+        batch.validate()?;
+        self.prepare(account)?;
+        let mut conn = self.inventory.connect(account, false)?;
+        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let snapshot = SqliteRepository::snapshot_in(&tx, account)?;
+        let history: i64 = tx.query_row("SELECT count(*) FROM batch", [], |r| r.get(0))?;
+        if history != 0 || snapshot.updated_at != Timestamp(0) {
+            return Err(Error::Conflict);
+        }
+        if snapshot.generation != 0
+            || snapshot.garage.is_some()
+            || !snapshot.items.is_empty()
+            || !snapshot.tables.is_empty()
+        {
+            return Err(Error::Conflict);
+        }
+        for (kind, document) in documents {
+            if read_in(&tx, *kind)?.is_some() {
+                return Err(Error::Conflict);
+            }
+            tx.execute(
+                &format!("INSERT INTO {} VALUES(1,?1,?2)", kind.table()),
+                params![1, document.bytes],
+            )?;
+        }
+        let applied = SqliteRepository::apply_in(&tx, account, batch, now)?;
+        tx.commit()?;
+        Ok(applied)
+    }
     pub fn open_owned_directory(root: &Path) -> Result<Self, Error> {
         Ok(Self {
             inventory: SqliteRepository::open_owned_directory(root)?,

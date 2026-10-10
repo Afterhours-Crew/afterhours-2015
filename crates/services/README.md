@@ -89,7 +89,7 @@ Control-service tests cover malformed and noncanonical requests, resource bounds
 identity changes, connection isolation, repeated requests and correlated replies.
 Run the workspace Cargo gates in the root README. No game install is required.
 
-Local authentication uses an explicit private identity document (storage-account
+Local authentication uses an explicit persistent identity (storage-account
 binding, positive wire persona/account IDs and display name), deployment policy,
 and fresh caller-supplied entropy per connection. The edge authorizes the local
 account and compares its storage binding before serving. External auth codes are
@@ -99,6 +99,12 @@ after the entire batch writes; partial failure closes the exchange. Retries with
 the same correlation retain the first clock value. Persistent identities survive
 reconnect while session/telemetry/ticker tokens and connection IDs refresh.
 Remote account authentication and automatic first-login history are not provided.
+
+`fresh_account::Prepared` takes injected entropy/time, a chosen name, explicit
+local license policy, an Items initialization recipe and typed table defaults.
+It constructs fresh state without an existing profile, then publishes service
+domains and inventory/table state in one transaction in a new directory. It does
+not implement the official prologue award protocol or infer missing menu replies.
 
 Host readiness owns the current binding and one bounded pending mesh request.
 It requires matching reliable-synchronization proof, a later injected join time,
