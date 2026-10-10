@@ -14,6 +14,7 @@ these implemented components:
 | [nfs-heat2](crates/heat2/README.md) | Bounded tagged fields, containers and canonical encoding |
 | [nfs-protocol](crates/protocol/README.md) | Typed backend payloads and bit-oriented world codecs |
 | [nfs-world-core](crates/world-core/README.md) | Transport, application state, File transfers, item models and startup registration codecs |
+| [nfs-world](crates/world/README.md) | Owned world sessions, typed replication, participant and vehicle state |
 | [nfs-lsx-codec](crates/lsx-codec/README.md) | Launcher framing, XML, envelopes and transform codecs |
 | [nfs-services](crates/services/README.md) | Owned startup groups, current account stats and reputation, client-state/telemetry handling, local recommendations/wrap listings, inventory, persistent-table views and content loaders |
 | [nfs-storage](crates/storage/README.md) | Account-owned inventory, garage slots and tables, with memory and SQLite adapters |
@@ -39,8 +40,8 @@ cargo test --workspace --locked
 Once the toolchain and dependencies are cached, add `--offline` to Cargo build,
 Clippy and test commands. No private repository, account profile or recording is
 needed. Passing these tests establishes the covered component behavior, not
-offline play or launcher independence. Session integration, scene replication,
-launcher policy and the runnable server remain unfinished.
+offline play or launcher independence. Server integration, launcher policy and
+the runnable server remain unfinished.
 
 The world attribute service consumes a committed readiness permit, validates the
 current group-to-world association and builds a typed notification. The association

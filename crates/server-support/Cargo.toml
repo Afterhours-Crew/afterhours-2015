@@ -1,4 +1,5 @@
 [package]
+workspace = "../.."
 name = "nfs-server-support"
 version = "0.1.0"
 description = "Bounded local discovery and latency socket services"

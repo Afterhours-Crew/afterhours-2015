@@ -142,6 +142,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "nfs-world"
+version = "0.1.0"
+dependencies = [
+ "nfs-protocol",
+ "nfs-world-core",
+]
+
+[[package]]
 name = "nfs-world-core"
 version = "0.1.0"
 dependencies = [
