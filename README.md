@@ -17,6 +17,8 @@ these implemented components:
 | [nfs-lsx-codec](crates/lsx-codec/README.md) | Launcher framing, XML, envelopes and transform codecs |
 | [nfs-services](crates/services/README.md) | Client-state and telemetry handling, local recommendations/wrap listings, account inventory, persistent-table views and content loaders |
 | [nfs-storage](crates/storage/README.md) | Account-owned inventory, garage slots and tables, with memory and SQLite adapters |
+| [nfs-frostbite](crates/frostbite/README.md) | Bounded, read-only reader for an installed game's content containers |
+| [nfs-content](crates/content/README.md) | Builds and caches deployment content from the player's own installation |
 
 Tests use constructed inputs, standard cryptographic vectors and temporary
 databases. Game files and service access are unnecessary. See the
