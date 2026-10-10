@@ -56,3 +56,6 @@ pub mod user_lookup;
 pub mod local_social;
 
 pub mod entitlements;
+pub mod item_licenses;
+pub mod kickback;
+pub mod speedwall;
