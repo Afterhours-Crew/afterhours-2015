@@ -19,7 +19,8 @@ use std::{fs::File, io::Read, path::Path};
 
 pub const SEED_BYTES: usize = 40;
 pub const MAX_POLICY_BYTES: usize = 512 * 1024;
-pub const INITIAL_BATCH: u64 = u64::MAX - 2;
+// Garage, persistent tables, awards and challenges reserve MAX through MAX-3.
+pub const INITIAL_BATCH: u64 = u64::MAX - 4;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
     Policy,
@@ -179,6 +180,10 @@ impl Prepared {
             inventory::load(&memory, storage, items, 1, now).map_err(|_| Error::Inventory)?;
         let (snapshot, _) = tables
             .ensure_loaded(&memory, storage, snapshot, now)
+            .map_err(|_| Error::Progression)?;
+        let snapshot = crate::awards::ensure_empty(&memory, storage, snapshot, now)
+            .map_err(|_| Error::Progression)?;
+        let snapshot = crate::challenges::ensure_empty(&memory, storage, snapshot, now)
             .map_err(|_| Error::Progression)?;
         let mut ops: Vec<_> = snapshot.items.into_values().map(Op::Insert).collect();
         ops.push(Op::SetGarage(snapshot.garage.ok_or(Error::Inventory)?));

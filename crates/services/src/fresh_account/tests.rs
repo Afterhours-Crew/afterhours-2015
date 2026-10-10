@@ -80,7 +80,24 @@ fn generated_account_reopens_with_owned_items_default_progression_and_no_profile
     assert_eq!(saved.updated_at, Timestamp(17));
     assert_eq!(saved.items.len(), 1);
     assert_eq!(saved.garage.unwrap().0[0].unwrap().get(), 1);
-    assert_eq!(saved.tables.len(), 15);
+    assert_eq!(saved.tables.len(), 25);
+    // The first menu reads must not collide with the creator's transaction or
+    // require another seed transaction. This regresses the initial batch-ID
+    // collision with awards and proves both service domains were published.
+    assert_eq!(
+        crate::awards::ensure_empty(&repository, account, saved.clone(), Timestamp(27)).unwrap(),
+        saved
+    );
+    assert_eq!(
+        crate::challenges::ensure_empty(&repository, account, saved.clone(), Timestamp(28))
+            .unwrap(),
+        saved
+    );
+    assert_eq!(
+        crate::awards::State::load(&saved).unwrap(),
+        crate::awards::State::default()
+    );
+    crate::challenges::Current::from_snapshot(&saved).unwrap();
     let loaded = inventory::load(&repository, account, &catalog(), 99, Timestamp(29)).unwrap();
     assert_eq!(loaded, saved);
     assert_eq!(
