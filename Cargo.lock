@@ -237,6 +237,7 @@ name = "nfs-server"
 version = "0.1.0"
 dependencies = [
  "httparse",
+ "nfs-content",
  "nfs-fire2",
  "nfs-heat2",
  "nfs-protocol",
