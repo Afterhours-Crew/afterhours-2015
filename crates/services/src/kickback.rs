@@ -8,9 +8,9 @@
 //!
 //! The counters and the winner tile are named values of a versioned state
 //! document; the gallery is an explicit empty local directory. A document
-//! without a winner tile leaves `2053/17` unsupported (no reply) rather than
-//! inventing one. Screenshot uploads, kickback voting and gallery contents are
-//! outside this read-only subset.
+//! without a winner tile answers `2053/17` with `KICKBACK_ERR_NOT_FOUND`
+//! rather than inventing a tile. Screenshot uploads, kickback voting and
+//! gallery contents are outside this read-only subset.
 use crate::{ContentError, SUPPORTED_BUILD_SHA256};
 use nfs_fire2::{Fields, Frame};
 use nfs_protocol::kickback::{
@@ -34,8 +34,6 @@ pub enum Error {
     Ineligible,
     /// The request belongs to another account or an unsupported query.
     Identity,
-    /// No winner tile is configured for this account.
-    Unsupported,
     Encode,
 }
 
@@ -254,7 +252,7 @@ impl State {
     }
 
     /// Answer one owned request for the authenticated account. `Identity` and
-    /// `Unsupported` are "not mine": the caller must not fall back to a template.
+    /// `Ineligible` are "not mine": the caller must not fall back to a template.
     pub fn reply(&self, wire: &[u8], account: AccountId, persona: i64) -> Result<Vec<u8>, Error> {
         let f = frame(wire)?;
         if account != self.account || persona <= 0 {
@@ -276,7 +274,13 @@ impl State {
             GET_LAST_WEEKS_WINNER_DATA => {
                 GetLastWeekWinnerDataRequest::decode(f.body, limits)
                     .map_err(|_| Error::Ineligible)?;
-                let w = self.winner.as_ref().ok_or(Error::Unsupported)?;
+                let Some(w) = self.winner.as_ref() else {
+                    return crate::error_reply(
+                        f.fields,
+                        nfs_protocol::metadata::KICKBACK_ERR_NOT_FOUND,
+                    )
+                    .ok_or(Error::Encode);
+                };
                 ScreenshotGalleryDataEx {
                     datetime: Some(w.datetime),
                     title: Some(w.title.as_bytes()),

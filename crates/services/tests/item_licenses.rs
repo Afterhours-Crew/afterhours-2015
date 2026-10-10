@@ -96,7 +96,6 @@ fn other_declarations_and_malformed_frames_are_not_acknowledged() {
                 (b"NFS13", b"Entitlement"),
             ],
         ),
-        (b"Items/GameItemSystem", &[]),
     ] {
         assert_eq!(
             content.reply(&declaration(system, licenses, 1)),
@@ -139,6 +138,64 @@ fn other_declarations_and_malformed_frames_are_not_acknowledged() {
     )
     .unwrap();
     assert_eq!(content.reply(&empty), Err(Error::Unsupported));
+}
+
+fn frame(body: &[u8], corr: u32) -> Vec<u8> {
+    nfs_fire2::encode(
+        Frame {
+            fields: Fields {
+                routing_a: 2052,
+                routing_b: 19,
+                correlation: corr,
+                ..Default::default()
+            },
+            metadata: &[],
+            body,
+        },
+        frame_limits(),
+    )
+    .unwrap()
+}
+
+#[test]
+fn a_declaration_without_licenses_is_acknowledged_for_the_configured_system() {
+    let content = Content::from_json(&document()).unwrap();
+    let absent = EnsurePlayerInventoryRequest {
+        item_system_name: Some(b"Items/GameItemSystem"),
+        ..Default::default()
+    }
+    .encode(body_limits())
+    .unwrap();
+    for q in [
+        frame(&absent, 7),
+        declaration(b"Items/GameItemSystem", &[], 7),
+    ] {
+        let reply = content.reply(&q).unwrap();
+        let d = nfs_fire2::decode(&reply, frame_limits()).unwrap().unwrap();
+        assert_eq!(
+            (
+                d.frame.fields.routing_a,
+                d.frame.fields.routing_b,
+                d.frame.fields.category,
+                d.frame.fields.correlation
+            ),
+            (2052, 19, 1, 7)
+        );
+        assert!(d.frame.body.is_empty() && d.frame.metadata.is_empty());
+    }
+    let other = EnsurePlayerInventoryRequest {
+        item_system_name: Some(b"Items/Other"),
+        ..Default::default()
+    }
+    .encode(body_limits())
+    .unwrap();
+    assert_eq!(content.reply(&frame(&other, 7)), Err(Error::Unsupported));
+    let unconfigured = Content::new("Items/GameItemSystem".into(), vec![]).unwrap();
+    assert!(unconfigured.reply(&frame(&absent, 8)).is_ok());
+    assert_eq!(
+        unconfigured.reply(&declaration(b"Items/GameItemSystem", LICENSES, 8)),
+        Err(Error::Unsupported)
+    );
 }
 
 #[test]

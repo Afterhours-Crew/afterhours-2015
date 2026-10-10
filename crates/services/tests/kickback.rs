@@ -87,12 +87,40 @@ fn counters_winner_and_empty_gallery_come_from_named_state() {
 }
 
 #[test]
-fn missing_winner_other_accounts_and_malformed_frames_do_not_answer() {
+fn missing_winner_answers_not_found_and_foreign_frames_do_not_answer() {
     let a = account(1);
     let state = State::from_json(&document(a, None), a).unwrap();
+    let absent = state.reply(&wire(17, 0, 9, &[]), a, 42).unwrap();
+    let d = nfs_fire2::decode(&absent, Default::default())
+        .unwrap()
+        .unwrap();
+    assert_eq!(d.consumed, absent.len());
     assert_eq!(
-        state.reply(&wire(17, 0, 1, &[]), a, 42),
-        Err(Error::Unsupported)
+        (
+            d.frame.fields.routing_a,
+            d.frame.fields.routing_b,
+            d.frame.fields.category,
+            d.frame.fields.correlation
+        ),
+        (2053, 17, 3, 9)
+    );
+    assert!(d.frame.body.is_empty());
+    let m = nfs_protocol::metadata::Fire2Metadata::decode(d.frame.metadata, Default::default())
+        .unwrap();
+    assert_eq!(
+        (m.context, m.error_code),
+        (
+            Some(0),
+            Some(nfs_protocol::metadata::KICKBACK_ERR_NOT_FOUND)
+        )
+    );
+    assert_eq!(
+        nfs_protocol::metadata::error_name(2053, m.error_code.unwrap()),
+        Some("KICKBACK_ERR_NOT_FOUND")
+    );
+    assert_eq!(
+        state.reply(&wire(17, 0, 9, &[]), account(2), 42),
+        Err(Error::Identity)
     );
     assert!(state.reply(&wire(2, 0, 1, &[]), a, 42).is_ok());
     assert_eq!(
