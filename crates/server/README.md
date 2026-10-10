@@ -152,8 +152,9 @@ At garage exit the server answers the leave request with the participant state
 chain and, when the garage layout has a `world_spawn` pose, replaces the garage
 car with a driveable world car in the same frame. When the client reports the
 new car, the server assigns a spawn point (a per-session id). It answers spawn
-requests and releases with the scene's occupied flag. Later world entry steps are
-not modeled.
+requests and releases with the scene's occupied flag. Once a participant has
+joined, the server polls the level root about every 1.1 s, and the client's
+answers are recorded. Later world entry steps are not modeled.
 
 `--redirector-port 0` chooses an ephemeral port (the default).
 `--idle-seconds` accepts 1–3600, and `--qos-seconds` accepts 1–86400.

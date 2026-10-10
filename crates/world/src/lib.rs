@@ -12,6 +12,7 @@ pub mod actors;
 pub mod frame;
 pub mod garage;
 pub mod launchers;
+pub mod level_poll;
 pub mod logic;
 pub mod participants;
 pub mod replication;

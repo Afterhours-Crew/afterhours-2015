@@ -540,6 +540,10 @@ impl Lifecycle {
     pub fn available(&self) -> bool {
         self.bindings.is_some()
     }
+    /// Whether any participant has begun.
+    pub fn has_participants(&self) -> bool {
+        !self.stages.is_empty()
+    }
     pub fn stage(&self, id: u16) -> Option<Stage> {
         self.stages.get(&id).copied()
     }
@@ -756,6 +760,8 @@ pub enum HostRpc {
     GaragePresence(crate::garage::presence::Notification),
     /// SpawnPoints occupied flag (same scene rpc_bool wire shape as presence).
     SpawnOccupied(crate::garage::presence::Notification),
+    /// Level root poll (scene-scoped method 0, same wire shape as presence).
+    LevelPoll(crate::garage::presence::Notification),
     SequenceStop(crate::sequences::Stop),
     Event(crate::logic::Fire),
 }
@@ -767,7 +773,9 @@ impl HostRpc {
             Self::Garage(v) => v.endpoint.scene,
             Self::Actor(v) => v.endpoint.scene,
             Self::Vehicle(v) => v.endpoint.scene,
-            Self::GaragePresence(v) | Self::SpawnOccupied(v) => v.endpoint.scene,
+            Self::GaragePresence(v) | Self::SpawnOccupied(v) | Self::LevelPoll(v) => {
+                v.endpoint.scene
+            }
             Self::SequenceStop(v) => v.sequence,
             Self::Event(v) => v.target.ghost,
         }
@@ -779,7 +787,7 @@ impl HostRpc {
             Self::Garage(v) => v.encode(),
             Self::Actor(v) => v.encode(),
             Self::Vehicle(v) => v.encode(),
-            Self::GaragePresence(v) | Self::SpawnOccupied(v) => v.encode(),
+            Self::GaragePresence(v) | Self::SpawnOccupied(v) | Self::LevelPoll(v) => v.encode(),
             Self::SequenceStop(v) => v.encode(),
             Self::Event(v) => v.encode().map_err(|_| Error::Shape),
         }

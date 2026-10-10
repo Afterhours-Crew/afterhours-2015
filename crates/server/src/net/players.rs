@@ -41,6 +41,7 @@ pub(super) struct PlayerListener {
     population: Option<Population>,
     garage_presence: nfs_world::garage::presence::Presence,
     spawn_points: nfs_world::spawn_points::SpawnPoints,
+    level_poll: nfs_world::level_poll::LevelPoll,
     /// World car ghost -> (participant, spawn assigned).
     world_cars: BTreeMap<u16, (u16, bool)>,
     glass: crate::glass::Glass,
@@ -405,6 +406,7 @@ impl PlayerListener {
             population: None,
             garage_presence: nfs_world::garage::presence::Presence::default(),
             spawn_points: nfs_world::spawn_points::SpawnPoints::default(),
+            level_poll: nfs_world::level_poll::LevelPoll::default(),
             world_cars: BTreeMap::new(),
             glass: crate::glass::Glass::default(),
             customization: crate::customization_timer::Timers::default(),
@@ -522,6 +524,17 @@ impl PlayerListener {
                 )
             }
         }
+        let mut level_poll = nfs_world::level_poll::LevelPoll::default();
+        match level_poll.bind(&records, roles.gameplay) {
+            Ok(true) => {}
+            Ok(false) => tracing::info!("level root absent; level poll stays unsupported"),
+            Err(error) => {
+                tracing::warn!(
+                    ?error,
+                    "level poll endpoint unbound; poll stays unsupported"
+                )
+            }
+        }
         let sections = split_scenes(records, nfs_world::application::OUTBOUND_FRAME_BITS)?;
         if sections.len() > MAX_PENDING - self.pending.len() {
             return Err(replication::Error::Bound);
@@ -530,6 +543,7 @@ impl PlayerListener {
         self.launchers = launchers;
         self.participants = participants;
         self.spawn_points = spawn_points;
+        self.level_poll = level_poll;
         self.pending.extend(sections);
         self.population = population;
         self.roles = Some(roles.clone());
@@ -590,6 +604,7 @@ impl Listener for PlayerListener {
         let mut population = self.population.clone();
         let mut garage_presence = self.garage_presence.clone();
         let mut spawn_points = self.spawn_points.clone();
+        let mut level_poll = self.level_poll.clone();
         let mut world_cars = self.world_cars.clone();
         let mut sequences = self.sequences.clone();
         let mut logic_ghosts = self.logic_ghosts.clone();
@@ -753,6 +768,17 @@ impl Listener for PlayerListener {
                         self.last_error = Some(error);
                         return false;
                     }
+                }
+            }
+            match level_poll.receive(body, |id| {
+                players.owns_participant(HOST_SELECTOR as u8, self.persona, id)
+            }) {
+                Ok(Some(_)) => continue,
+                Ok(None) => {}
+                Err(error) => {
+                    self.refused += 1;
+                    self.last_error = Some(error);
+                    return false;
                 }
             }
             match spawn_points.receive(body, |id| {
@@ -1077,6 +1103,7 @@ impl Listener for PlayerListener {
         self.population = population;
         self.garage_presence = garage_presence;
         self.spawn_points = spawn_points;
+        self.level_poll = level_poll;
         self.world_cars = world_cars;
         self.glass = glass;
         self.customization = customization;

@@ -54,9 +54,11 @@ fn content_with(spawn: Option<&[Kind]>) -> WorldContent {
         if i == 14 {
             kinds = spawn.unwrap().to_vec();
         } else if i == 10 {
-            kinds.resize(13, Kind::Noop);
+            kinds.resize(52, Kind::Noop);
             kinds[1] = Kind::RpcReferences;
             kinds[8..13].fill(Kind::Rpc);
+            // Level root poll endpoint (field 51).
+            kinds[51] = Kind::Rpc;
         } else if i == 11 {
             kinds.resize(115, Kind::Noop);
             for index in [6, 11, 7, 8, 25, 21, 18, 19, 114, 95, 90, 89, 86, 87] {
@@ -233,4 +235,17 @@ fn glass_reports_on_a_world_car_assign_one_spawn() {
         );
     }
     assert_eq!(spawn.assigned(40), Some(1));
+}
+
+#[test]
+fn level_poll_binds_the_level_root_and_waits_for_a_participant() {
+    let content = content();
+    let gameplay = content.roles.as_ref().unwrap().gameplay;
+    let mut listener = PlayerListener::new(101);
+    listener.initialize_world(&content).unwrap();
+    let scene = listener.players.objects().scene(gameplay).unwrap();
+    assert_eq!(listener.level_poll.endpoint().unwrap().scene, scene);
+    let queued = listener.pending_rpcs.len();
+    listener.advance_level_poll(10_000).unwrap();
+    assert_eq!(listener.pending_rpcs.len(), queued);
 }
