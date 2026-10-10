@@ -89,7 +89,12 @@ impl Followup {
             || user.origin_persona_id != Some(persona as u64)
             || user.external_blob.as_ref().is_none_or(|b| !b.0.is_empty())
             || user.pid_id != Some(0)
-            || user.name != Some(b"Offline Driver")
+            || user.name.is_none_or(|name| {
+                name.is_empty()
+                    || name.len() > 64
+                    || std::str::from_utf8(name)
+                        .map_or(true, |name| name.chars().any(char::is_control))
+            })
             || user.account_locale.is_none()
             || user
                 .persona_namespace

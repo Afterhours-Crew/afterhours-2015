@@ -16,11 +16,7 @@ use std::collections::BTreeMap;
 pub const MAX_INSTANCES: usize = 128;
 pub const FALLBACK_MS: u64 = 300_000;
 pub const FIRST_READY_MS: u64 = 16_000;
-pub const STREAMING_ASSET: Asset = Asset {
-    bundle: 16,
-    type_id: 3404,
-    local_index: 0,
-};
+
 pub const STREAMING_LOADED: u32 = 3_648_004;
 pub const STREAMING_UNLOADED: u32 = 12_540_227;
 
@@ -326,12 +322,13 @@ impl Sequences {
         players: &Players,
         owner: Owner,
         ghost: u16,
+        streaming_asset: Asset,
     ) -> Result<(), Error> {
         let slot = players
             .local_slot(owner.connection, owner.persona, owner.participant)
             .ok_or(Error::UnknownObject)?;
         if !matches!(&players.objects().get(ghost).ok_or(Error::UnknownObject)?.initial,
-            replication::Initial::Entity { prefix, fields } if prefix.asset == STREAMING_ASSET
+            replication::Initial::Entity { prefix, fields } if prefix.asset == streaming_asset
                 && matches!(fields.first(), Some(entity::Initial::Root { reference, .. }) if *reference == owner.participant))
         {
             return Err(Error::TypeMismatch);

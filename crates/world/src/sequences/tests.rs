@@ -3,6 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use super::*;
+const STREAMING_ASSET: Asset = Asset {
+    bundle: 3,
+    type_id: 7,
+    local_index: 1,
+};
 use crate::replication::{Initial, players::Request, sublevel};
 
 fn setup() -> (Players, Sequences) {
@@ -314,7 +319,10 @@ fn fallback_clock_capacity_repeats_and_discarded_outputs_preserve_phases() {
 
 fn streaming(players: &mut Players, owner: Owner) -> u16 {
     let content = Content::new(
-        vec![entity::creation::Catalog::new(16, &[(3404, 1)]).unwrap()],
+        vec![
+            entity::creation::Catalog::new(STREAMING_ASSET.bundle, &[(STREAMING_ASSET.type_id, 2)])
+                .unwrap(),
+        ],
         vec![(
             STREAMING_ASSET,
             entity::Profile::new(&[entity::Kind::Root]).unwrap(),
@@ -363,7 +371,9 @@ fn readiness_requires_streaming_and_every_slot_and_does_not_reset_on_repeats() {
         let owner = join(&mut players, 1, 10);
         let sequence = sequences.start(&mut players, owner).unwrap().unwrap().id;
         let ghost = streaming(&mut players, owner);
-        sequences.bind_streaming(&players, owner, ghost).unwrap();
+        sequences
+            .bind_streaming(&players, owner, ghost, STREAMING_ASSET)
+            .unwrap();
         sequences.poll(100, 0).unwrap();
         if streaming_first {
             assert!(
@@ -423,10 +433,22 @@ fn streaming_checks_current_asset_participant_local_slot_and_transactional_error
     let second = sequences.start(&mut players, b).unwrap().unwrap().id;
     let ga = streaming(&mut players, a);
     let gb = streaming(&mut players, b);
-    assert!(sequences.bind_streaming(&players, a, gb).is_err());
-    assert!(sequences.bind_streaming(&players, a, first).is_err());
-    sequences.bind_streaming(&players, a, ga).unwrap();
-    sequences.bind_streaming(&players, b, gb).unwrap();
+    assert!(
+        sequences
+            .bind_streaming(&players, a, gb, STREAMING_ASSET)
+            .is_err()
+    );
+    assert!(
+        sequences
+            .bind_streaming(&players, a, first, STREAMING_ASSET)
+            .is_err()
+    );
+    sequences
+        .bind_streaming(&players, a, ga, STREAMING_ASSET)
+        .unwrap();
+    sequences
+        .bind_streaming(&players, b, gb, STREAMING_ASSET)
+        .unwrap();
     sequences.garage_loaded(a, true).unwrap();
     sequences.garage_loaded(b, true).unwrap();
     assert_eq!(

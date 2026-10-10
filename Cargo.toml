@@ -9,6 +9,7 @@ members = [
     "crates/storage",
     "crates/services",
     "crates/server-support",
+    "crates/server",
 ]
 resolver = "3"
 

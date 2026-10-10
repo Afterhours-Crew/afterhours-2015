@@ -490,9 +490,17 @@ fn baseline_rejects_nonlocal_policy_missing_fields_unknowns_and_wrong_headers() 
     let mut b = baseline(100, 200);
     b.user_info = None;
     cases.push(b);
-    let mut b = baseline(100, 200);
-    b.user_info.as_mut().unwrap().name = Some(b"captured-profile");
-    cases.push(b);
+    for name in [
+        b"".as_slice(),
+        b"bad\0name",
+        b"bad\nname",
+        b"\xff",
+        &[b'a'; 65],
+    ] {
+        let mut b = baseline(100, 200);
+        b.user_info.as_mut().unwrap().name = Some(name);
+        cases.push(b);
+    }
     let mut b = baseline(100, 200);
     b.user_info.as_mut().unwrap().external_id = Some(999);
     cases.push(b);

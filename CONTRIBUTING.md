@@ -63,6 +63,10 @@ and openssl 0.10.81 (Apache-2.0). Its vendored build uses openssl-src
 300.6.1+3.6.3 (MIT OR Apache-2.0 wrapper; OpenSSL 3.6.3 is Apache-2.0).
 These dependencies are fetched from the Cargo registry, not copied here.
 
+The server edge uses Tokio 1.53.2 (MIT), tracing 0.1.44 (MIT) and
+tracing-subscriber 0.3.23 (MIT). Versions/checksums are locked; these dependencies
+remain at the socket/diagnostic edge rather than in the sans-IO service models.
+
 ## License
 
 All code here is under the [Mozilla Public License 2.0](LICENSE). Contributions

@@ -5,11 +5,13 @@ servers as the goals. This is the canonical home for runtime code and its
 first-party dependencies.
 
 Components arrive incrementally once their behavior is understood and tested.
-**There is no runnable game server in this repository yet.** The workspace owns
+The standalone server now builds here; operating a compatible garage requires
+separately supplied content and account state. The workspace owns
 these implemented components:
 
 | Component | Responsibility |
 | --- | --- |
+| [nfs-server](crates/server/README.md) | Runnable local server, owned control integration, world listeners and deployment configuration |
 | [nfs-fire2](crates/fire2/README.md) | Bounded stream framing and incremental decoding |
 | [nfs-heat2](crates/heat2/README.md) | Bounded tagged fields, containers and canonical encoding |
 | [nfs-protocol](crates/protocol/README.md) | Typed backend payloads and bit-oriented world codecs |
@@ -40,8 +42,8 @@ cargo test --workspace --locked
 Once the toolchain and dependencies are cached, add `--offline` to Cargo build,
 Clippy and test commands. No private repository, account profile or recording is
 needed. Passing these tests establishes the covered component behavior, not
-offline play or launcher independence. Server integration, launcher policy and
-the runnable server remain unfinished.
+offline play or launcher independence. Fresh-account initialization, complete
+garage mutations and launcher independence remain unfinished.
 
 The world attribute service consumes a committed readiness permit, validates the
 current group-to-world association and builds a typed notification. The association
