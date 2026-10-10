@@ -18,6 +18,7 @@ pub mod fresh_account;
 pub mod garage_logic;
 pub mod glass;
 pub mod identity;
+pub mod install_content;
 pub mod limits;
 pub mod matchmaking_session;
 pub mod matchmaking_status;
