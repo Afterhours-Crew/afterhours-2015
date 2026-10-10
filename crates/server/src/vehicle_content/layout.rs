@@ -32,6 +32,9 @@ pub struct Layout {
     pub scene_key: u32,
     pub item_scene_key: u32,
     slots: [Slot; 5],
+    /// Root pose of the player's car when it leaves the garage (exact root
+    /// position, not a resting locator). Optional deployment content.
+    world_spawn: Option<Slot>,
 }
 #[derive(Clone, Copy, Debug)]
 pub struct Occupied<'a> {
@@ -63,7 +66,7 @@ impl Layout {
                 "item_blueprint",
                 "main",
             ],
-            &[],
+            &["world_spawn"],
         )?;
         if v["format"] != "nfs-garage-population"
             || v["version"] != 1
@@ -119,11 +122,40 @@ impl Layout {
                 .map_err(|_| Failure::ProfileConfig)?;
             slots.push(slot);
         }
+        let world_spawn = match v.get("world_spawn") {
+            None => None,
+            Some(row) => {
+                keys(row, &["transform_bits"], &[])?;
+                let transform: [u32; 16] = array(&row["transform_bits"], 16)?
+                    .iter()
+                    .map(uint)
+                    .collect::<Result<Vec<_>, _>>()?
+                    .try_into()
+                    .map_err(|_| Failure::ProfileConfig)?;
+                if transform.iter().any(|b| !f32::from_bits(*b).is_finite())
+                    || [3, 7, 11, 15].iter().any(|i| transform[*i] != 0)
+                {
+                    return Err(Failure::ProfileConfig);
+                }
+                let slot = Slot {
+                    component_index: 0,
+                    item_component_index: 0,
+                    transform,
+                };
+                nfs_world::replication::vehicle::orientation::quaternion_from_basis(slot.basis())
+                    .map_err(|_| Failure::ProfileConfig)?;
+                Some(slot)
+            }
+        };
         Ok(Self {
             scene_key,
             item_scene_key,
             slots: slots.try_into().map_err(|_| Failure::ProfileConfig)?,
+            world_spawn,
         })
+    }
+    pub fn world_spawn(&self) -> Option<&Slot> {
+        self.world_spawn.as_ref()
     }
     pub fn occupied<'a>(
         &'a self,

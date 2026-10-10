@@ -901,6 +901,10 @@ pub async fn world_host(
             warn!(connection, ?error, "sequence world clock rejected");
             return;
         }
+        if let Err(error) = listener.advance_level_poll(now_ms()) {
+            warn!(connection, ?error, "level poll rejected");
+            return;
+        }
         if !listener.files_alive(now_ms()) {
             warn!(connection, "incoming File deadline; closing world");
             return;

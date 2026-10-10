@@ -32,6 +32,31 @@ impl Players {
             .flatten()
     }
 
+    /// Remove the participant's vehicle for `item` (garage display car before
+    /// its world re-creation). Returns the removed ghost id.
+    pub fn remove_vehicle(
+        &mut self,
+        connection: u8,
+        persona: u64,
+        participant: u16,
+        item: u64,
+    ) -> Result<u16, Error> {
+        if !self.owns_participant(connection, persona, participant) {
+            return Err(Error::UnknownObject);
+        }
+        let id = *self
+            .vehicles
+            .get(&(participant, item))
+            .ok_or(Error::UnknownObject)?;
+        let mut next = self.objects.clone();
+        let object = next.remove(id)?;
+        if !matches!(object.initial, Initial::Vehicle { .. }) {
+            return Err(Error::TypeMismatch);
+        }
+        self.objects = next;
+        self.vehicles.remove(&(participant, item));
+        Ok(id)
+    }
     pub fn create_vehicle(
         &mut self,
         connection: u8,

@@ -28,34 +28,12 @@ impl PlayerListener {
         presence: &mut nfs_world::garage::presence::Presence,
         persona: u64,
     ) -> Result<Vec<HostRpc>, replication::Error> {
-        use nfs_world::{
-            garage::presence::COMPONENT,
-            participants::Endpoint,
-            replication::{Initial, sublevel},
-        };
         let mut out = Vec::new();
         for reply in replies {
             let HostRpc::Vehicle(vehicle) = reply else {
                 continue;
             };
-            let scene = players
-                .objects()
-                .scene(roles.ok_or(replication::Error::Unsupported)?.garage)
-                .ok_or(replication::Error::UnknownObject)?;
-            let Some(Initial::SubLevel { fields, .. }) =
-                players.objects().get(scene).map(|o| &o.initial)
-            else {
-                return Err(replication::Error::TypeMismatch);
-            };
-            let Some(sublevel::Initial::RpcBool { rpc, value: false }) = fields.get(COMPONENT)
-            else {
-                return Err(replication::Error::TypeMismatch);
-            };
-            let endpoint = Endpoint {
-                scene,
-                selector: rpc.selector,
-                serial: rpc.serial,
-            };
+            let endpoint = Self::presence_endpoint(roles, players)?;
             if let Some(notification) = presence.set(endpoint, vehicle.participant, true, |id| {
                 players.owns_participant(HOST_SELECTOR as u8, persona, id)
             })? {
@@ -63,6 +41,116 @@ impl PlayerListener {
             }
         }
         Ok(out)
+    }
+    fn presence_endpoint(
+        roles: Option<&crate::scene_roles::SceneRoles>,
+        players: &Players,
+    ) -> Result<nfs_world::participants::Endpoint, replication::Error> {
+        use nfs_world::{
+            garage::presence::COMPONENT,
+            participants::Endpoint,
+            replication::{Initial, sublevel},
+        };
+        let scene = players
+            .objects()
+            .scene(roles.ok_or(replication::Error::Unsupported)?.garage)
+            .ok_or(replication::Error::UnknownObject)?;
+        let Some(Initial::SubLevel { fields, .. }) =
+            players.objects().get(scene).map(|o| &o.initial)
+        else {
+            return Err(replication::Error::TypeMismatch);
+        };
+        let Some(sublevel::Initial::RpcBool { rpc, value: false }) = fields.get(COMPONENT) else {
+            return Err(replication::Error::TypeMismatch);
+        };
+        Ok(Endpoint {
+            scene,
+            selector: rpc.selector,
+            serial: rpc.serial,
+        })
+    }
+    /// A participant leaving the garage: presence off when it was the last one.
+    pub(super) fn garage_presence_leave(
+        roles: Option<&crate::scene_roles::SceneRoles>,
+        players: &Players,
+        presence: &mut nfs_world::garage::presence::Presence,
+        participant: u16,
+        persona: u64,
+    ) -> Result<Option<HostRpc>, replication::Error> {
+        let endpoint = Self::presence_endpoint(roles, players)?;
+        Ok(presence
+            .set(endpoint, participant, false, |id| {
+                players.owns_participant(HOST_SELECTOR as u8, persona, id)
+            })?
+            .map(HostRpc::GaragePresence))
+    }
+    /// The client's glass condition reports on a world car we created (it
+    /// sends three on every new player car; E748/E750/E751). The first one
+    /// assigns the participant a spawn point; `Some(None)` is a recognized
+    /// report that needs no assignment (repeat, or no SpawnPoints scene bound).
+    /// The glass reply itself is the caller's.
+    pub(super) fn world_car_ready(
+        message: &nfs_world::logic::Message,
+        world_cars: &mut BTreeMap<u16, (u16, bool)>,
+        spawn_points: &mut nfs_world::spawn_points::SpawnPoints,
+    ) -> Result<Option<Option<nfs_world::participants::Notification>>, replication::Error> {
+        let nfs_world::logic::Message::Reached { target, .. } = message else {
+            return Ok(None);
+        };
+        if !crate::glass::Glass::recognizes(message) {
+            return Ok(None);
+        }
+        let Some((participant, assigned)) = world_cars.get_mut(&target.ghost) else {
+            return Ok(None);
+        };
+        if *assigned || spawn_points.bindings().is_none() {
+            return Ok(Some(None));
+        }
+        let notification = spawn_points.assign(*participant)?;
+        *assigned = true;
+        Ok(Some(Some(notification)))
+    }
+    /// Garage exit: swap the participant's garage car for its world car in one
+    /// section (deletion and creation, absolute origin as for garage cars).
+    /// `None` when no world spawn or garage content is configured.
+    pub(super) fn exit_world_car(
+        players: &mut Players,
+        population: Option<&mut Population>,
+        inventory: Option<&Inventory>,
+        content: Option<&GarageContent>,
+        participant: u16,
+        persona: u64,
+    ) -> Result<Option<Section>, replication::Error> {
+        let (Some(population), Some(inventory), Some(content)) = (population, inventory, content)
+        else {
+            return Ok(None);
+        };
+        if content.layout.world_spawn().is_none() {
+            return Ok(None);
+        }
+        let spawned = population.spawn_world(
+            players,
+            Owner {
+                connection: HOST_SELECTOR as u8,
+                persona,
+                participant,
+            },
+            inventory,
+            &content.vehicles,
+            &content.layout,
+        )?;
+        if !spawned.messages.is_empty() {
+            // The car bundle was registered at garage entry; a new registration
+            // here would need content delivery before the creation.
+            return Err(replication::Error::Unsupported);
+        }
+        Ok(Some(Section {
+            float_bits: None,
+            flag: false,
+            deleted: spawned.deleted,
+            setup: Some(Setup::RawEscape([0; 3])),
+            records: spawned.records,
+        }))
     }
     pub(super) fn populate(
         players: &mut Players,
