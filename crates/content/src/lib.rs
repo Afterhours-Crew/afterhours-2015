@@ -20,6 +20,8 @@ mod executable;
 mod fingerprint;
 mod items;
 mod scan;
+#[cfg(any(test, feature = "synthetic"))]
+pub mod synthetic;
 mod tables;
 
 pub use fingerprint::{Fingerprint, Input, fingerprint};

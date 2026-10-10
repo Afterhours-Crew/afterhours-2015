@@ -10,6 +10,10 @@ license.workspace = true
 [lints]
 workspace = true
 
+[features]
+# Constructed installations for tests of this crate and its users.
+synthetic = ["nfs-frostbite/synthetic"]
+
 [dependencies]
 nfs-frostbite = { path = "../frostbite" }
 nfs-services = { path = "../services" }
