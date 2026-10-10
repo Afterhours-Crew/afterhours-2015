@@ -20,6 +20,8 @@ pub(super) struct Output {
     pub sections: Vec<Section>,
     pub replies: Vec<HostRpc>,
 }
+/// Logic events the client fires on a newly created player car (E748/E750).
+const NEW_CAR_EVENTS: [u32; 3] = [21_578_436, 14_703_462, 28_404_286];
 impl PlayerListener {
     pub(super) fn garage_presence(
         roles: Option<&crate::scene_roles::SceneRoles>,
@@ -83,6 +85,31 @@ impl PlayerListener {
                 players.owns_participant(HOST_SELECTOR as u8, persona, id)
             })?
             .map(HostRpc::GaragePresence))
+    }
+    /// The client's new-car events on a world car we created (the same three
+    /// fire on every official player car creation, E748/E750). The first one
+    /// assigns the participant a spawn point; `Some(None)` is a recognized
+    /// event that needs no reply (repeat, or no SpawnPoints scene bound).
+    pub(super) fn world_car_ready(
+        message: &nfs_world::logic::Message,
+        world_cars: &mut BTreeMap<u16, (u16, bool)>,
+        spawn_points: &mut nfs_world::spawn_points::SpawnPoints,
+    ) -> Result<Option<Option<nfs_world::participants::Notification>>, replication::Error> {
+        let nfs_world::logic::Message::Reached { event, target, .. } = message else {
+            return Ok(None);
+        };
+        if !NEW_CAR_EVENTS.contains(event) {
+            return Ok(None);
+        }
+        let Some((participant, assigned)) = world_cars.get_mut(&target.ghost) else {
+            return Ok(None);
+        };
+        if *assigned || spawn_points.bindings().is_none() {
+            return Ok(Some(None));
+        }
+        let notification = spawn_points.assign(*participant)?;
+        *assigned = true;
+        Ok(Some(Some(notification)))
     }
     /// Garage exit: swap the participant's garage car for its world car in one
     /// section (deletion and creation, absolute origin as for garage cars).

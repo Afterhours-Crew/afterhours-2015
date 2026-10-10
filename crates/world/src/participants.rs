@@ -32,16 +32,25 @@ pub enum Call {
     LeaveTagged(u8),
     /// Method-2 call on a participant-scoped garage endpoint at garage exit.
     Notify,
+    /// Method 0 carrying a u32 argument (SpawnPoints assignment id).
+    Assign(u32),
 }
 impl Call {
     pub fn method(self) -> u32 {
         match self {
-            Self::Add | Self::Enter => 0,
+            Self::Add | Self::Enter | Self::Assign(_) => 0,
             Self::Leave | Self::LeaveTagged(_) => 1,
             Self::LoadInventory | Self::Notify => 2,
         }
     }
-    /// The 5 bits written after the method word; zero except `LeaveTagged`.
+    pub fn argument(self) -> Option<u32> {
+        match self {
+            Self::Assign(value) => Some(value),
+            _ => None,
+        }
+    }
+    /// The 5 bits written after the method word and argument; zero except
+    /// `LeaveTagged`.
     pub fn tail(self) -> u8 {
         match self {
             Self::LeaveTagged(tail) => tail,
@@ -70,8 +79,11 @@ impl Notification {
         payload
             .put(self.endpoint.selector.into(), 9)
             .put(self.endpoint.serial.value().into(), 10)
-            .put(self.call.method().into(), 32)
-            .put(self.call.tail().into(), 5);
+            .put(self.call.method().into(), 32);
+        if let Some(argument) = self.call.argument() {
+            payload.put(argument.into(), 32);
+        }
+        payload.put(self.call.tail().into(), 5);
         payload.align();
         let mut body = BitWriter::new();
         body.put(0, 32)
@@ -742,6 +754,8 @@ pub enum HostRpc {
     Actor(crate::actors::Binding),
     Vehicle(crate::garage::vehicle::Binding),
     GaragePresence(crate::garage::presence::Notification),
+    /// SpawnPoints occupied flag (same scene rpc_bool wire shape as presence).
+    SpawnOccupied(crate::garage::presence::Notification),
     SequenceStop(crate::sequences::Stop),
     Event(crate::logic::Fire),
 }
@@ -753,7 +767,7 @@ impl HostRpc {
             Self::Garage(v) => v.endpoint.scene,
             Self::Actor(v) => v.endpoint.scene,
             Self::Vehicle(v) => v.endpoint.scene,
-            Self::GaragePresence(v) => v.endpoint.scene,
+            Self::GaragePresence(v) | Self::SpawnOccupied(v) => v.endpoint.scene,
             Self::SequenceStop(v) => v.sequence,
             Self::Event(v) => v.target.ghost,
         }
@@ -765,7 +779,7 @@ impl HostRpc {
             Self::Garage(v) => v.encode(),
             Self::Actor(v) => v.encode(),
             Self::Vehicle(v) => v.encode(),
-            Self::GaragePresence(v) => v.encode(),
+            Self::GaragePresence(v) | Self::SpawnOccupied(v) => v.encode(),
             Self::SequenceStop(v) => v.encode(),
             Self::Event(v) => v.encode().map_err(|_| Error::Shape),
         }

@@ -26,6 +26,7 @@ mod deployment_tests;
 mod vehicles;
 
 const MAX_PENDING: usize = 32;
+const MAX_WORLD_CARS: usize = 128;
 
 pub(super) struct PlayerListener {
     stats: Accepting,
@@ -39,6 +40,9 @@ pub(super) struct PlayerListener {
     vehicles: Option<std::sync::Arc<GarageContent>>,
     population: Option<Population>,
     garage_presence: nfs_world::garage::presence::Presence,
+    spawn_points: nfs_world::spawn_points::SpawnPoints,
+    /// World car ghost -> (participant, spawn assigned).
+    world_cars: BTreeMap<u16, (u16, bool)>,
     glass: crate::glass::Glass,
     customization: crate::customization_timer::Timers,
     world_ms: u64,
@@ -400,6 +404,8 @@ impl PlayerListener {
             vehicles: None,
             population: None,
             garage_presence: nfs_world::garage::presence::Presence::default(),
+            spawn_points: nfs_world::spawn_points::SpawnPoints::default(),
+            world_cars: BTreeMap::new(),
             glass: crate::glass::Glass::default(),
             customization: crate::customization_timer::Timers::default(),
             world_ms: 0,
@@ -500,6 +506,22 @@ impl PlayerListener {
                 )
             }
         }
+        let mut spawn_points = nfs_world::spawn_points::SpawnPoints::default();
+        match roles
+            .spawn_points
+            .map(|key| spawn_points.bind(&records, key))
+        {
+            Some(Ok(true)) => {}
+            None | Some(Ok(false)) => {
+                tracing::info!("SpawnPoints scene absent; world spawns stay unsupported")
+            }
+            Some(Err(error)) => {
+                tracing::warn!(
+                    ?error,
+                    "SpawnPoints endpoints unbound; world spawns stay unsupported"
+                )
+            }
+        }
         let sections = split_scenes(records, nfs_world::application::OUTBOUND_FRAME_BITS)?;
         if sections.len() > MAX_PENDING - self.pending.len() {
             return Err(replication::Error::Bound);
@@ -507,6 +529,7 @@ impl PlayerListener {
         self.players = players;
         self.launchers = launchers;
         self.participants = participants;
+        self.spawn_points = spawn_points;
         self.pending.extend(sections);
         self.population = population;
         self.roles = Some(roles.clone());
@@ -566,6 +589,8 @@ impl Listener for PlayerListener {
         let mut records = Vec::new();
         let mut population = self.population.clone();
         let mut garage_presence = self.garage_presence.clone();
+        let mut spawn_points = self.spawn_points.clone();
+        let mut world_cars = self.world_cars.clone();
         let mut sequences = self.sequences.clone();
         let mut logic_ghosts = self.logic_ghosts.clone();
         let mut unsupported_logic = 0;
@@ -631,6 +656,17 @@ impl Listener for PlayerListener {
                     responses.push(nfs_world::participants::HostRpc::Event(
                         glass.receive(owner, &message)?,
                     ));
+                } else if let Some(assignment) =
+                    Self::world_car_ready(&message, &mut world_cars, &mut spawn_points)?
+                {
+                    if let Some(notification) = assignment {
+                        tracing::info!(
+                            participant = notification.participant,
+                            call = ?notification.call,
+                            "owned world car created; spawn point assigned"
+                        );
+                        responses.push(nfs_world::participants::HostRpc::Participant(notification));
+                    }
                 } else {
                     unsupported_logic += 1;
                     tracing::debug!(?message, "unsupported client logic event");
@@ -717,6 +753,21 @@ impl Listener for PlayerListener {
                     }
                 }
             }
+            match spawn_points.receive(body, |id| {
+                players.owns_participant(HOST_SELECTOR as u8, self.persona, id)
+            }) {
+                Ok(Some(flag)) => {
+                    tracing::info!(?flag, "owned spawn request or release");
+                    responses.extend(flag.map(nfs_world::participants::HostRpc::SpawnOccupied));
+                    continue;
+                }
+                Ok(None) => {}
+                Err(error) => {
+                    self.refused += 1;
+                    self.last_error = Some(error);
+                    return false;
+                }
+            }
             match launchers.receive(body, |id| {
                 players.owns(HOST_SELECTOR as u8, self.persona, id)
             }) {
@@ -781,7 +832,19 @@ impl Listener for PlayerListener {
                             match world_car {
                                 // The official exit frame carries the car swap and
                                 // the state chain together (E748).
-                                Some(section) => exit_entries.push((section, chain)),
+                                Some(section) => {
+                                    if let ([participant], [record]) =
+                                        (exited.as_slice(), section.records.as_slice())
+                                    {
+                                        if world_cars.len() >= MAX_WORLD_CARS {
+                                            self.refused += 1;
+                                            self.last_error = Some(replication::Error::Bound);
+                                            return false;
+                                        }
+                                        world_cars.insert(record.id, (*participant, false));
+                                    }
+                                    exit_entries.push((section, chain))
+                                }
                                 None => responses.extend(chain),
                             }
                         }
@@ -1011,6 +1074,8 @@ impl Listener for PlayerListener {
         }
         self.population = population;
         self.garage_presence = garage_presence;
+        self.spawn_points = spawn_points;
+        self.world_cars = world_cars;
         self.glass = glass;
         self.customization = customization;
         for (participant, measurement) in measurements {
