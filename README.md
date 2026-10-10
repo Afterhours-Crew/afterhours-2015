@@ -77,6 +77,11 @@ concurrent connections without replacing unrelated keys. Separate versioned
 settings files leave inventory databases unchanged; local content seeds only an
 absent settings store. Filesystem and SQLite work belongs on blocking workers.
 
+Static control catalogs use named deployment definitions for key scopes, kill
+switches and SpeedList types, plus an explicit disabled limited-feature policy.
+Typed replies use the current request and authenticated persona. Catalogs retain
+no request/reply trees, captured frames or account identity.
+
 ## License
 
 This repository is licensed under the Mozilla Public License, version 2.0. See

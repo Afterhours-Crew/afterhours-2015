@@ -2,6 +2,14 @@
 
 State-owned services built on the storage port and typed protocol models.
 
+Static control catalogs (`7/15`, `2050/75`, `2050/78`, `2055/1`) consume a
+bounded `nfs-control-catalogs` version-1 document with named key scopes, ordered
+integer pairs, kill-switch names and SpeedList type definitions. Limited features
+use an explicit disabled policy. Replies are built through typed codecs and bind
+the authenticated persona where required. Unknown forms receive no answer; the
+edge must not fall back to templates on these routes. This does not implement
+feature scheduling, SpeedList matchmaking or account history.
+
 Daily challenge reads join an explicit local catalog/period with current durable
 account progress, obtained awards and monthly ranks. Empty local history grants
 nothing. Reads preserve state, and validated state operations can share atomic
