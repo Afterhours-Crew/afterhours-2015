@@ -20,8 +20,6 @@ pub(super) struct Output {
     pub sections: Vec<Section>,
     pub replies: Vec<HostRpc>,
 }
-/// Logic events the client fires on a newly created player car (E748/E750).
-const NEW_CAR_EVENTS: [u32; 3] = [21_578_436, 14_703_462, 28_404_286];
 impl PlayerListener {
     pub(super) fn garage_presence(
         roles: Option<&crate::scene_roles::SceneRoles>,
@@ -86,19 +84,20 @@ impl PlayerListener {
             })?
             .map(HostRpc::GaragePresence))
     }
-    /// The client's new-car events on a world car we created (the same three
-    /// fire on every official player car creation, E748/E750). The first one
+    /// The client's glass condition reports on a world car we created (it
+    /// sends three on every new player car; E748/E750/E751). The first one
     /// assigns the participant a spawn point; `Some(None)` is a recognized
-    /// event that needs no reply (repeat, or no SpawnPoints scene bound).
+    /// report that needs no assignment (repeat, or no SpawnPoints scene bound).
+    /// The glass reply itself is the caller's.
     pub(super) fn world_car_ready(
         message: &nfs_world::logic::Message,
         world_cars: &mut BTreeMap<u16, (u16, bool)>,
         spawn_points: &mut nfs_world::spawn_points::SpawnPoints,
     ) -> Result<Option<Option<nfs_world::participants::Notification>>, replication::Error> {
-        let nfs_world::logic::Message::Reached { event, target, .. } = message else {
+        let nfs_world::logic::Message::Reached { target, .. } = message else {
             return Ok(None);
         };
-        if !NEW_CAR_EVENTS.contains(event) {
+        if !crate::glass::Glass::recognizes(message) {
             return Ok(None);
         }
         let Some((participant, assigned)) = world_cars.get_mut(&target.ghost) else {

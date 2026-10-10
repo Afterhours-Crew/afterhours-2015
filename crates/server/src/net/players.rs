@@ -656,10 +656,12 @@ impl Listener for PlayerListener {
                     responses.push(nfs_world::participants::HostRpc::Event(
                         glass.receive(owner, &message)?,
                     ));
-                } else if let Some(assignment) =
-                    Self::world_car_ready(&message, &mut world_cars, &mut spawn_points)?
-                {
-                    if let Some(notification) = assignment {
+                    // A world car's first glass report also shows that the
+                    // client has the car: assign its spawn point (E751).
+                    if let Some(notification) =
+                        Self::world_car_ready(&message, &mut world_cars, &mut spawn_points)?
+                            .flatten()
+                    {
                         tracing::info!(
                             participant = notification.participant,
                             call = ?notification.call,

@@ -186,7 +186,7 @@ fn optional_spawn_points_role_binds_its_scene_or_stays_unsupported() {
 }
 
 #[test]
-fn new_car_events_on_a_world_car_assign_one_spawn() {
+fn glass_reports_on_a_world_car_assign_one_spawn() {
     use nfs_world::logic::{EntityRef, Message};
     let mut listener = PlayerListener::new(101);
     listener
@@ -221,6 +221,11 @@ fn new_car_events_on_a_world_car_assign_one_spawn() {
         (40, nfs_world::participants::Call::Assign(1))
     );
     assert_eq!(first.endpoint, spawn.bindings().unwrap().assign);
+    // The three reports are glass signals, which the glass model answers
+    // before the assignment (regression: E751 never reached the assignment).
+    for report in [28_404_286, 14_703_462, 21_578_436] {
+        assert!(crate::glass::Glass::recognizes(&event(report, 300)));
+    }
     for repeat in [14_703_462, 28_404_286, 21_578_436] {
         assert_eq!(
             PlayerListener::world_car_ready(&event(repeat, 300), &mut cars, &mut spawn),
