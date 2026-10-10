@@ -88,6 +88,10 @@ directory results. The single-account helper is valid only for a directory with
 one local account. Menu news implements a bounded unavailable-feed policy for
 the supported locale. Neither service retains captured replies.
 
+Local social queries encode an explicit eligible-player snapshot and known-empty
+friend recommendations/recent-player history. Callers supply and refresh current
+directory state; an unknown or nonempty history never becomes an empty success.
+
 ## License
 
 This repository is licensed under the Mozilla Public License, version 2.0. See
