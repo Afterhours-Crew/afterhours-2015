@@ -92,6 +92,11 @@ Local social queries encode an explicit eligible-player snapshot and known-empty
 friend recommendations/recent-player history. Callers supply and refresh current
 directory state; an unknown or nonempty history never becomes an empty success.
 
+Entitlement reads use a bounded versioned account-state document with named grants
+and supported group scopes. Current authenticated account/persona checks precede
+query selection, and stable grant IDs survive reopening. General search and grant
+mutations remain unsupported; existing state is never rewritten by a read.
+
 ## License
 
 This repository is licensed under the Mozilla Public License, version 2.0. See
