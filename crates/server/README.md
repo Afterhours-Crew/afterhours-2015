@@ -1,0 +1,125 @@
+# nfs-server
+
+Owned local control services and world networking for NFS 2015. This crate
+contains the runnable server, a sans-IO control session and the Tokio socket
+edge. All first-party dependencies are in this workspace. It has no dependency
+on a recorder, private repository, capture manifest or captured reply store.
+
+The server generates replies from deployment policy, local identity, account
+state and static content. This is an incremental implementation: unsupported
+routes are reported rather than answered with invented success. A successful
+start or automated test does not establish complete gameplay or launcher
+independence. The repository does not distribute game content or an account
+profile; running a compatible garage requires the operator's separately
+prepared content and state. Fresh-account initialization and several garage
+mutations are still incomplete.
+
+## Build and start
+
+Use the toolchain selected by the workspace. The vendored OpenSSL build needs a
+C compiler and Perl; Windows also needs MSVC Build Tools and NASM. Run from this
+checkout:
+
+```sh
+cargo build -p nfs-server --locked
+cargo run -p nfs-server --locked -- --help
+```
+
+The executable is `target/debug/nfs-server` (`.exe` on Windows). It can be copied
+to a deployment directory. Its working directory need not contain this source
+tree. It listens on IPv4 loopback only. No EA authentication, telemetry, DNS
+lookup or hosted database is used by the server. Client activation and launching
+remain separate concerns.
+
+Create a deployment directory with `artifacts/`, `artifacts/runs/` and a private
+configuration directory. Pass `--root <deployment-directory>` and
+`--output <absolute-path-to-artifacts/runs/new-run>`. The output parent must
+already exist; the final run directory must not. Configuration paths are
+relative to `--root`, or may be absolute. `--state-directory` must be a relative
+path under `artifacts/`, for example `artifacts/state`.
+
+Every configured local account must agree across `--local-identity`,
+`--local-account` and the account-owned state files. The latter is a nonzero
+32-digit hexadecimal storage identifier. Existing SQLite state is durable and
+must be preserved across restarts. Initial inventory content is applied only
+through the account initialization rules; changing content does not reset an
+existing account.
+
+## Configuration contract
+
+The CLI requires all control families below. Missing or invalid policy fails
+before the readiness announcement. JSON loaders reject unsupported versions,
+unknown fields and out-of-bounds collections. Build-specific content checks
+the supported image hash exposed by `nfs_services::SUPPORTED_BUILD_SHA256`.
+The linked loaders define the exact versioned field schemas.
+
+| Options | Input and schema |
+| --- | --- |
+| `--bootstrap-config` | Local bootstrap values; endpoints are bound from listeners ([loader](../services/src/bootstrap/content.rs)) |
+| `--auth-config`, `--local-identity` | Authentication policy and local account/persona/name ([authentication](../services/src/authentication.rs)) |
+| `--group-policy` | Group configuration ([group](../services/src/group.rs)) |
+| `--matchmaking-admission`, `--matchmaking-policy` | Admission and status policies ([admission](../services/src/matchmaking.rs), [status](../services/src/matchmaking_status.rs)) |
+| `--world-policy` | Allocation/setup policy ([world setup](../services/src/world_setup.rs)) |
+| `--control-catalogs` | Typed static menu/catalog content ([catalogs](../services/src/control_catalogs.rs)) |
+| `--entitlement-state`, `--kickback-state`, `--speedwall-state` | Account-owned local state ([entitlements](../services/src/entitlements.rs), [kickback](../services/src/kickback.rs), [speedwall](../services/src/speedwall.rs)) |
+| `--item-licenses` | Static item license definitions ([licenses](../services/src/item_licenses.rs)) |
+| `--user-settings` | Initial settings; durable SQLite values take precedence ([settings](../services/src/user_settings.rs)) |
+| `--stat-definitions`, `--challenge-content` | Definitions used with current account views ([stats](../services/src/stats.rs), [challenges](../services/src/challenges.rs)) |
+| `--owned-menu-awards`, `--owned-local-social` | Enable current award reads and the bounded single-account social model |
+
+For world/garage operation also supply:
+
+| Options | Input and schema |
+| --- | --- |
+| `--world-content` | Version 4 registrations, scene profiles, launcher definitions and explicit scene roles ([loader](src/content.rs), [roles](src/scene_roles.rs)) |
+| `--world-mac-template` | Separate 64-byte MAC parameter input, checked by hash; no bytes are bundled ([validator](src/world_handshake.rs)) |
+| `--item-content`, `--state-directory`, `--local-account` | Item catalog plus durable account state; required together ([item content](../services/src/item_content.rs)) |
+| `--persistent-content` | Persistent-table definitions ([persistent](../services/src/persistent.rs)) |
+| `--progression-content` | Progression restoration and entity construction ([progression](src/progression.rs)) |
+| `--vehicle-content`, `--garage-layout` | Vehicle assets and parking layout ([vehicles](src/vehicle_content.rs), [layout](src/vehicle_content/layout.rs)) |
+| `--sequence-content`, `--garage-logic` | Sequence definitions and garage logic graph ([sequences](src/sequence_content.rs), [garage](src/garage_logic.rs)) |
+
+World content versions 1–3 remain readable by offline inspection APIs, but the
+runtime requires version 4 with `roles`. This object names `level`, `gameplay`,
+`startup`, `garage`, `progression`, ten ordered `traffic` scene keys, and
+`customization_timer`/`streaming_gate` assets (each has `bundle`, `type_id`,
+`local_index`). Scene keys must be distinct, greater than one and present in the
+scene profiles; root key one is reserved. The level must match the level
+registration. These inputs are static roles, never previously allocated ghost
+IDs. No default game asset table is embedded in the server.
+
+`--redirector-port 0` chooses an ephemeral port (the default).
+`--idle-seconds` accepts 1–3600, and `--qos-seconds` accepts 1–86400.
+`--stop-file <path>` requests graceful shutdown when that path appears; Ctrl+C
+also stops the server. Relative stop paths follow the process working directory.
+Legacy `--owned-only`, `--owned-world-connection`, `--owned-world-readiness` and
+`--owned-world-attributes` switches remain accepted; the public runtime always
+uses owned control models. `--manifest`, `--control-content` and runtime replay
+are unsupported.
+
+The first stdout JSON line with `ready: true` includes the actual listener
+addresses and configured capabilities. Logs go to stderr. Each run writes
+bounded-queue diagnostic recordings below its output directory. Recordings can
+contain account data and client authentication inputs: keep them private.
+Structured status logs contain route/error summaries, not request bodies.
+
+## Integration and tests
+
+`Deployment` validates local policies and builds fresh `SessionProfiles` using
+injected time and a `SeedSource`. `ControlSession` returns reply batches and
+advances publication only on `committed()`; callers invoke `write_failed()` if
+delivery fails. The socket edge enforces this ordering, stages settings
+transactions before acknowledgements, and gates world readiness on the current
+transport. The runtime uses OS randomness; deterministic seeds are for tests.
+
+World listeners allocate per-session participants and ghosts, use typed
+replication, and obtain inventory/table snapshots from account storage. Scene
+roles are validated before allocation. Queues, frames, concurrent connections,
+deadlines and blocking workers are bounded. First-party Rust forbids unsafe code.
+
+Run the workspace fmt, Clippy and test gates from the repository README.
+Portable tests construct their own data and include authentication ordering,
+different identities, failed writes, persistence, partial/combined frames,
+timeouts, UDP transport and graceful shutdown. The bootstrap fixture under
+`tests/support` contains constructed placeholders; it is not a deployable game
+configuration. Private capture comparisons remain outside this repository.
