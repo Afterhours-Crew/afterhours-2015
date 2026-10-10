@@ -55,6 +55,7 @@ pub struct Startup<'p> {
     previous: Option<(Vec<u8>, Vec<u8>)>,
     readiness: Option<world_readiness::Session>,
     pending_readiness: Option<world_readiness::PreparedBatch>,
+    departure: Option<nfs_services::departure::Departure>,
     world_start: Option<world_handshake::Binding>,
     world_started: bool,
     world_gate: Option<world_readiness::Binding>,
@@ -130,6 +131,7 @@ impl<'p> Startup<'p> {
             previous: None,
             readiness: None,
             pending_readiness: None,
+            departure: None,
             world_start: None,
             world_started: false,
             world_gate: None,
@@ -325,6 +327,11 @@ impl<'p> Startup<'p> {
         {
             return Ok(Answer::Reply(vec![first.clone()]));
         }
+        if let Some(answer) = self.depart(request)? {
+            let first = answer.first().ok_or(Failure::Reply)?.clone();
+            self.previous = Some((request.to_vec(), first));
+            return Ok(Answer::Reply(answer));
+        }
         if (route.component, route.command) == (4, 29)
             && self
                 .readiness
@@ -341,6 +348,33 @@ impl<'p> Startup<'p> {
         Ok(answer.map_or(Answer::Unsupported, Answer::Reply))
     }
 
+    /// Leave and disconnected-mesh reports for the committed current world.
+    /// `None` leaves the request to the other handlers.
+    fn depart(&mut self, request: &[u8]) -> Result<Option<Vec<Vec<u8>>>, Failure> {
+        use nfs_services::departure::{Departure, Error, owns};
+        let Some(readiness) = self.readiness.as_ref() else {
+            return Ok(None);
+        };
+        if !owns(request) {
+            return Ok(None);
+        }
+        let departure = match &mut self.departure {
+            Some(departure) => departure,
+            slot => slot
+                .insert(Departure::new(readiness.binding()).map_err(|_| Failure::ProfileConfig)?),
+        };
+        match departure.reply(request) {
+            Ok(frames) => Ok(Some(frames)),
+            Err(Error::Ineligible) => Ok(None),
+            Err(Error::Encode) => Err(Failure::Reply),
+            Err(Error::Context) => Err(Failure::ProfileConfig),
+            Err(Error::Bound | Error::Closed | Error::Write) => Ok(None),
+        }
+    }
+    /// The current world was left by a written leave batch.
+    pub fn world_left(&self) -> bool {
+        self.departure.as_ref().is_some_and(|d| d.left())
+    }
     fn gate(&self) -> InitialReliableSyncPrerequisite {
         match self.world_gate {
             Some(binding) => InitialReliableSyncPrerequisite::Published { binding },
@@ -478,10 +512,7 @@ impl<'p> Startup<'p> {
             return match state.reply(request, account, self.identities.persona) {
                 Ok(reply) => Ok(Some(vec![reply])),
                 Err(nfs_services::kickback::Error::Ineligible) => Ok(None),
-                Err(
-                    nfs_services::kickback::Error::Identity
-                    | nfs_services::kickback::Error::Unsupported,
-                ) => Ok(None),
+                Err(nfs_services::kickback::Error::Identity) => Ok(None),
                 Err(nfs_services::kickback::Error::Encode) => Err(Failure::Reply),
             };
         }
@@ -607,6 +638,11 @@ impl<'p> Startup<'p> {
         if self.pending_settings_change().is_some() {
             return Err(Failure::Reply);
         }
+        if let Some(departure) = self.departure.as_mut()
+            && departure.pending()
+        {
+            return departure.committed().map_err(|_| Failure::Reply);
+        }
         let Some(branch) = self.branch.as_mut() else {
             return Ok(());
         };
@@ -639,6 +675,9 @@ impl<'p> Startup<'p> {
         }
         if let Some(readiness) = self.readiness.as_mut() {
             readiness.abort_write();
+        }
+        if let Some(departure) = self.departure.as_mut() {
+            departure.abort_write();
         }
         self.pending_readiness = None;
         if let Some(branch) = self.branch.as_mut() {

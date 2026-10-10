@@ -266,6 +266,10 @@ impl Session {
         }
         result
     }
+    /// The committed current world association this session serves.
+    pub fn binding(&self) -> Binding {
+        self.binding
+    }
     pub fn has_pending_request(&self) -> bool {
         self.pending.is_some()
     }

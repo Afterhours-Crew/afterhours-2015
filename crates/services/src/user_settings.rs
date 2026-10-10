@@ -6,7 +6,9 @@
 //! owned state; writes produce a per-key change. The socket edge must refresh
 //! from the account store before each request, persist the pending change, then
 //! send the reply. A failed reply after commit leaves the durable value intact;
-//! repeating the same save is idempotent. Missing-key reads are unsupported.
+//! repeating the same save is idempotent. A single-key read of a key the
+//! account does not hold answers `UTIL_USS_RECORD_NOT_FOUND`; nothing is
+//! stored and no default value is invented.
 use nfs_fire2::{Fields, Frame, HEADER_LEN};
 use nfs_protocol::{autolog, util};
 use serde_json::{Value as Json, json};
@@ -379,7 +381,12 @@ impl Session {
                 }
                 let Some((key, value)) = self.settings.strings.iter().find(|(k, _)| k == key)
                 else {
-                    return Ok(None);
+                    return crate::error_reply(
+                        f.fields,
+                        nfs_protocol::metadata::UTIL_USS_RECORD_NOT_FOUND,
+                    )
+                    .map(Some)
+                    .ok_or(Error::Encode);
                 };
                 let body = util::UserSettingsResponse {
                     key: Some(key),
@@ -614,7 +621,41 @@ mod tests {
         }
         .encode(body_limits())
         .unwrap();
-        assert_eq!(session.reply(&request((9, 10), 7, &missing)).unwrap(), None);
+        let absent = session
+            .reply(&request((9, 10), 7, &missing))
+            .unwrap()
+            .unwrap();
+        let d = nfs_fire2::decode(
+            &absent,
+            nfs_fire2::Limits::new(64, crate::ERROR_METADATA_BYTES, 0).unwrap(),
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(d.consumed, absent.len());
+        assert_eq!(
+            (
+                d.frame.fields.routing_a,
+                d.frame.fields.routing_b,
+                d.frame.fields.category,
+                d.frame.fields.correlation
+            ),
+            (9, 10, 3, 7)
+        );
+        assert!(d.frame.body.is_empty());
+        let m =
+            nfs_protocol::metadata::Fire2Metadata::decode(d.frame.metadata, body_limits()).unwrap();
+        assert_eq!(
+            (m.context, m.error_code),
+            (
+                Some(0),
+                Some(nfs_protocol::metadata::UTIL_USS_RECORD_NOT_FOUND)
+            )
+        );
+        assert_eq!(
+            nfs_protocol::metadata::error_name(9, m.error_code.unwrap()),
+            Some("UTIL_USS_RECORD_NOT_FOUND")
+        );
+        assert!(session.pending().is_none());
         let foreign = autolog::UserSettingsRequest {
             blaze_id: Some(PERSONA + 1),
             ..Default::default()

@@ -5,8 +5,11 @@
 //! Item-system inventory assurance (`2052/19`, `ensurePlayerInventory`): the
 //! client declares its item system and the licenses it holds; the service
 //! acknowledges an exact, configured declaration with an empty response (no
-//! new awards). Any other item system or license set is unsupported (no
-//! reply): awarding items for licenses is inventory policy, not this route.
+//! new awards). A declaration of the configured item system without any
+//! license (a new account holding only the base game) is acknowledged the same
+//! way: it names nothing to award. Any other item system or license set is
+//! unsupported (no reply): awarding items for licenses is inventory policy,
+//! not this route.
 use crate::{ContentError, SUPPORTED_BUILD_SHA256};
 use nfs_fire2::{Fields, Frame};
 use nfs_protocol::items::{COMPONENT, ENSURE_PLAYER_INVENTORY, EnsurePlayerInventoryRequest};
@@ -172,12 +175,18 @@ impl Content {
         {
             return Err(Error::Ineligible);
         }
-        let declared = q.available_licenses.as_ref().ok_or(Error::Unsupported)?;
-        let same = q.item_system_name == Some(self.item_system.as_bytes())
-            && declared.0.len() == self.licenses.len()
-            && declared.0.iter().zip(&self.licenses).all(|(row, l)| {
-                row.license == Some(l.license.as_bytes()) && row.source == Some(l.source.as_bytes())
-            });
+        if q.item_system_name != Some(self.item_system.as_bytes()) {
+            return Err(Error::Unsupported);
+        }
+        // A declaration without licenses (list absent or empty) names nothing a
+        // license could award, so it is acknowledged like the configured set.
+        let declared = q.available_licenses.as_ref().map_or(&[][..], |d| &d.0[..]);
+        let same = declared.is_empty()
+            || (declared.len() == self.licenses.len()
+                && declared.iter().zip(&self.licenses).all(|(row, l)| {
+                    row.license == Some(l.license.as_bytes())
+                        && row.source == Some(l.source.as_bytes())
+                }));
         if !same {
             return Err(Error::Unsupported);
         }

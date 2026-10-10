@@ -90,8 +90,18 @@ An allocated directory can remain after an I/O failure for diagnosis. Initial
 vehicle choice follows the configured recipe and existing local garage policy.
 
 This provides independent local state, not the official prologue award flow.
-Empty menu state and first-login behavior still require client validation; missing
-winner/speedwall responses retain their existing unsupported classification.
+Empty menu state and first-login behavior still require client validation. A new
+account's empty state is answered without invented values: a license declaration
+naming no license receives the observed empty acknowledgement, a settings read of
+an absent key answers `UTIL_USS_RECORD_NOT_FOUND`, and a missing kickback winner
+answers `KICKBACK_ERR_NOT_FOUND` (codes from the client's error-name tables).
+A missing speedwall row remains unsupported.
+
+Leaving the current world (`4/22 leaveGameByGroup`) answers an empty
+acknowledgement and a player-removed notification (`PLAYER_LEFT`) for the current
+G2 and persona; disconnected reports for the current G1 self mesh and G2 host mesh
+receive empty acknowledgements. Departure state commits after the write. It does
+not re-enter, create or destroy a group.
 
 ## Configuration contract
 
