@@ -48,7 +48,7 @@ fn document(account: AccountId) -> serde_json::Value {
             {"speed_wall_id":5,"stat_type":0,"rank":3,"rating_bits":0x4248_0000u32,"total_count":40,
              "integers":[["Events",7],["Wins",-1]],"floats":[["TopSpeed",0x4320_0000u32]],"strings":[["Car","M3"]]},
             {"speed_wall_id":5,"stat_type":1,"rank":1,"rating_bits":0,"total_count":2,
-             "integers":[],"floats":[],"strings":[]}]})
+             "integers":[],"floats":[],"strings":null}]})
 }
 
 #[test]
@@ -89,6 +89,14 @@ fn own_row_names_the_current_persona_and_display_name() {
         row.stats_str.unwrap().0,
         vec![(b"Car".as_slice(), b"M3".as_slice())]
     );
+    // A row without a string map omits it on the wire.
+    let second = state
+        .reply(&query(42, 5, 1, 9), a, 42, b"Local Driver")
+        .unwrap();
+    let m = SpeedWallBriefInfoResponse::decode(frame(&second).body, body_limits()).unwrap();
+    let row = m.speed_wall.unwrap();
+    assert!(row.stats_str.is_none());
+    assert!(row.stats_int.unwrap().0.is_empty());
     // Another persona on the same account gets its own identity in the row.
     let other = state.reply(&query(43, 5, 0, 9), a, 43, b"Other").unwrap();
     let m = SpeedWallBriefInfoResponse::decode(frame(&other).body, body_limits()).unwrap();
@@ -212,7 +220,7 @@ fn documents_are_validated_bounded_and_account_bound() {
         total_count: 0,
         integers: vec![],
         floats: vec![],
-        strings: vec![],
+        strings: None,
     };
     let many: Vec<Row> = (0..17)
         .map(|i| Row {

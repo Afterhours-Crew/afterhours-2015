@@ -70,7 +70,8 @@ pub struct Row {
     pub total_count: i32,
     pub integers: Vec<(String, i32)>,
     pub floats: Vec<(String, u32)>,
-    pub strings: Vec<(String, String)>,
+    /// The string stats map; `None` omits it (the observed own row has none).
+    pub strings: Option<Vec<(String, String)>>,
 }
 impl std::fmt::Debug for Row {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -152,7 +153,7 @@ impl State {
                 || !walls.insert((row.speed_wall_id, row.stat_type))
                 || row.integers.len() > MAX_ENTRIES
                 || row.floats.len() > MAX_ENTRIES
-                || row.strings.len() > MAX_ENTRIES
+                || row.strings.as_ref().is_some_and(|s| s.len() > MAX_ENTRIES)
             {
                 return Err(ContentError::Invalid);
             }
@@ -166,7 +167,7 @@ impl State {
                     return Err(ContentError::Invalid);
                 }
             }
-            for (key, value) in &row.strings {
+            for (key, value) in row.strings.iter().flatten() {
                 if key.is_empty()
                     || key.len() > MAX_KEY_BYTES
                     || key.contains('\0')
@@ -231,7 +232,10 @@ impl State {
                     total_count: signed(&r["total_count"])?,
                     integers: keyed(&r["integers"], signed)?,
                     floats: keyed(&r["floats"], bits)?,
-                    strings: keyed(&r["strings"], |v| text(v, MAX_VALUE_BYTES))?,
+                    strings: match &r["strings"] {
+                        Json::Null => None,
+                        v => Some(keyed(v, |v| text(v, MAX_VALUE_BYTES))?),
+                    },
                 })
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -309,12 +313,14 @@ impl State {
                         .map(|(k, v)| (k.as_bytes(), *v))
                         .collect(),
                 )),
-                stats_str: Some(RowStrings(
-                    row.strings
-                        .iter()
-                        .map(|(k, v)| (k.as_bytes(), v.as_bytes()))
-                        .collect(),
-                )),
+                stats_str: row.strings.as_ref().map(|strings| {
+                    RowStrings(
+                        strings
+                            .iter()
+                            .map(|(k, v)| (k.as_bytes(), v.as_bytes()))
+                            .collect(),
+                    )
+                }),
                 ..Default::default()
             }),
             speed_wall_id: Some(row.speed_wall_id),
