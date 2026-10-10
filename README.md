@@ -82,6 +82,12 @@ switches and SpeedList types, plus an explicit disabled limited-feature policy.
 Typed replies use the current request and authenticated persona. Catalogs retain
 no request/reply trees, captured frames or account identity.
 
+User lookup binds initial identity to the latest generated session data. Headset
+updates change only that session; external lookup uses explicit caller-owned
+directory results. The single-account helper is valid only for a directory with
+one local account. Menu news implements a bounded unavailable-feed policy for
+the supported locale. Neither service retains captured replies.
+
 ## License
 
 This repository is licensed under the Mozilla Public License, version 2.0. See

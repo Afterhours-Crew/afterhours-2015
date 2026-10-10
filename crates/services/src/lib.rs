@@ -49,3 +49,6 @@ pub mod world_setup;
 pub mod matchmaking;
 
 pub mod user_settings;
+
+pub mod menu_news;
+pub mod user_lookup;
