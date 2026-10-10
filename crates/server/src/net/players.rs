@@ -832,7 +832,7 @@ impl Listener for PlayerListener {
                                     }
                                 }
                             }
-                            let world_car = match exited.as_slice() {
+                            let mut world_car = match exited.as_slice() {
                                 [participant] => match Self::exit_world_car(
                                     &mut players,
                                     population.as_mut(),
@@ -850,6 +850,34 @@ impl Listener for PlayerListener {
                                 },
                                 _ => None,
                             };
+                            // The same exit frame deletes the garage-only logic and
+                            // recreates the loading presentation (E757).
+                            if let (Some(section), Some(logic), [participant]) =
+                                (world_car.as_mut(), self.logic.as_deref(), exited.as_slice())
+                                && logic.has_exit()
+                            {
+                                match logic.produce(
+                                    crate::garage_logic::Which::Exit,
+                                    &mut players,
+                                    *participant,
+                                    logic_ghosts.entry(*participant).or_default(),
+                                ) {
+                                    Ok(out) => {
+                                        section.deleted.extend(out.deleted);
+                                        section.records.extend(out.records);
+                                        chain.extend(
+                                            out.events
+                                                .into_iter()
+                                                .map(nfs_world::participants::HostRpc::Event),
+                                        );
+                                    }
+                                    Err(error) => {
+                                        self.refused += 1;
+                                        self.last_error = Some(error);
+                                        return false;
+                                    }
+                                }
+                            }
                             for &participant in &exited {
                                 tracing::info!(
                                     participant,
