@@ -61,3 +61,5 @@ pub mod heartbeat;
 pub mod item_licenses;
 pub mod kickback;
 pub mod speedwall;
+
+pub mod user_session;

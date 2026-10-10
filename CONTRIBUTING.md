@@ -58,6 +58,11 @@ Content loaders use serde_json 1.0.151 (MIT OR Apache-2.0); all registry
 versions and checksums are locked. Main/master/default require pull requests
 and reject force pushes/deletion, including for administrators.
 
+Loopback discovery and QoS support uses httparse 1.10.1 (MIT OR Apache-2.0)
+and openssl 0.10.81 (Apache-2.0). Its vendored build uses openssl-src
+300.6.1+3.6.3 (MIT OR Apache-2.0 wrapper; OpenSSL 3.6.3 is Apache-2.0).
+These dependencies are fetched from the Cargo registry, not copied here.
+
 ## License
 
 All code here is under the [Mozilla Public License 2.0](LICENSE). Contributions

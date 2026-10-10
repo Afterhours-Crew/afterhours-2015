@@ -99,6 +99,12 @@ mutations remain unsupported; existing state is never rewritten by a read.
 
 ## License
 
+`nfs-server-support` provides bounded HTTP/XML discovery and loopback QoS
+listeners, including an ephemeral TLS identity. Blocking adapters belong on
+blocking workers. `nfs-services::user_session` owns the ordered network and
+latency updates used to initialize each authenticated session. Their portable
+tests construct requests and use local ephemeral sockets without recordings.
+
 This repository is licensed under the Mozilla Public License, version 2.0. See
 [LICENSE](LICENSE). Each source file carries the MPL notice, so modified copies
 of those files must stay under the MPL when distributed, while new files that
